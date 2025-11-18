@@ -1,8 +1,9 @@
 
 import sys
 import pygame
+import time
 # Import color constants
-from util.color import (
+from utils.color import (
 	BG,
 	TITLE,
 	START_BASE,
@@ -12,8 +13,9 @@ from util.color import (
 	STATUS,
 )
 # Import utility functions
-from util.loading import draw_loading_screen
-from util.ui import draw_button
+from utils.loading import draw_loading_screen, run_loading_with_callback
+from utils.ui import draw_button
+from utils.game_sound_loader import BackgroundMusicLoader
 
 
 def main():
@@ -25,6 +27,18 @@ def main():
 	clock = pygame.time.Clock()
 	font = pygame.font.SysFont(None, 48)
 	title_font = pygame.font.SysFont(None, 72)
+
+	# Start loading background music immediately (before showing menu)
+	bg_loader = BackgroundMusicLoader()
+
+	# Run loader with UI. This blocks here until loading finishes, but keeps UI responsive.
+	run_loading_with_callback(
+		surface=pygame.display.get_surface(),
+		loader=bg_loader.load,
+		on_complete=bg_loader.play,
+		title="Loading Music",
+		subtitle="Loading background music...",
+	)
 
 	# Button sizes and positions
 	btn_w, btn_h = 260, 96
@@ -52,7 +66,6 @@ def main():
 			elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 				if start_rect.collidepoint(event.pos):
 					started = True
-					print("Start clicked")
 				elif quit_rect.collidepoint(event.pos):
 					running = False
 
@@ -71,8 +84,7 @@ def main():
 			status_surf = font.render("Started!", True, STATUS)
 			status_rect = status_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 140))
 			screen.blit(status_surf, status_rect)
-			# Show loading screen for demonstration
-			draw_loading_screen(screen, 75.0, title='Loading...', subtitle='Assets')
+
 
 
 		pygame.display.flip()
