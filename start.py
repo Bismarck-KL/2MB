@@ -22,6 +22,7 @@ class Application:
 		self.font = pygame.font.SysFont(None, 48)
 		self.title_font = pygame.font.SysFont(None, 72)
 
+        # TO-DO(Quanrina): upload the resources with correct paths
 		# resources
 		images = {
 			"background": os.path.join("assets", "images", "background.png"),
