@@ -8,6 +8,8 @@ from utils.resource_manager import ResourceManager
 
 # scenes are in their own modules to keep this file small
 from menu_scene import MenuScene
+from game_scene import GameScene
+from avatar_create import AvatarCreateScene
 
 
 class Application:
@@ -33,6 +35,19 @@ class Application:
 
 		self.running = True
 		self.scene = None
+		# register scene classes here so Application controls creation
+		self.scene_registry = {
+			"MenuScene": MenuScene,
+			"GameScene": GameScene,
+			"AvatarCreateScene": AvatarCreateScene,
+		}
+
+	def change_scene(self, scene_name: str):
+		"""Instantiate and switch to a scene by name from the registry."""
+		cls = self.scene_registry.get(scene_name)
+		if not cls:
+			return
+		self.scene = cls(self)
 
 	def load_resources(self):
 		# Quick sanity-draw so the window is visible immediately on some systems
@@ -58,8 +73,8 @@ class Application:
 		# load resources first
 		self.load_resources()
 
-		# create initial scene
-		self.scene = MenuScene(self)
+		# create initial scene via registry
+		self.change_scene("MenuScene")
 
 		# main loop
 		while self.running:
