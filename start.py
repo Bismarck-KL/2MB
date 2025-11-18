@@ -2,6 +2,7 @@
 import sys
 import pygame
 import time
+import os
 # Import color constants
 from utils.color import (
 	BG,
@@ -15,7 +16,7 @@ from utils.color import (
 # Import utility functions
 from utils.loading import draw_loading_screen, run_loading_with_callback
 from utils.ui import draw_button
-from utils.game_sound_loader import BackgroundMusicLoader
+from utils.resource_manager import ResourceManager
 
 
 def main():
@@ -29,18 +30,27 @@ def main():
 	title_font = pygame.font.SysFont(None, 72)
 
 	# Start loading background music immediately (before showing menu)
-	bg_loader = BackgroundMusicLoader()
+	# Prepare resources to load: background and button images
+	# TO-DO(Qianrina): please upload the image assets to the repo
+	images = {
+		"background": os.path.join("assets", "images", "background.png"),
+		"btn_start": os.path.join("assets", "images", "button_start.png"),
+		"btn_quit": os.path.join("assets", "images", "button_quit.png"),
+	}
 
-	# Run loader with UI. This blocks here until loading finishes, but keeps UI responsive.
+	res_mgr = ResourceManager(images=images, image_base_dir=None, audio_path=None)
+
+	# Run combined loader (images + audio) with the loading UI
 	run_loading_with_callback(
 		surface=pygame.display.get_surface(),
-		loader=bg_loader.load,
-		on_complete=bg_loader.play,
-		title="Loading Music",
-		subtitle="Loading background music...",
+		loader=res_mgr.load_all,
+		on_complete=res_mgr.play_music,
+		title="Loading Resources",
+		subtitle="Images and audio",
 	)
 
 	# Button sizes and positions
+    # TO-DO(Qianrina): please update the button sizes and positions if needed
 	btn_w, btn_h = 260, 96
 	center_x = WIDTH // 2
 	center_y = HEIGHT // 2
@@ -77,8 +87,28 @@ def main():
 		title_rect = title_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 140))
 		screen.blit(title_surf, title_rect)
 
-		draw_button(screen, start_rect, "Start", font, base_color, hover_color, mouse_pos)
-		draw_button(screen, quit_rect, "Quit", font, QUIT_BASE, QUIT_HOVER, mouse_pos)
+		# draw using loaded images if available, fallback to drawn buttons
+		bg_image = res_mgr.get_image("background")
+		if bg_image:
+			scaled = pygame.transform.smoothscale(bg_image, (WIDTH, HEIGHT))
+			screen.blit(scaled, (0, 0))
+		else:
+			screen.fill(BG)
+
+		start_img = res_mgr.get_image("btn_start")
+		quit_img = res_mgr.get_image("btn_quit")
+
+		if start_img:
+			img_rect = start_img.get_rect(center=start_rect.center)
+			screen.blit(start_img, img_rect)
+		else:
+			draw_button(screen, start_rect, "Start", font, base_color, hover_color, mouse_pos)
+
+		if quit_img:
+			img_rect = quit_img.get_rect(center=quit_rect.center)
+			screen.blit(quit_img, img_rect)
+		else:
+			draw_button(screen, quit_rect, "Quit", font, QUIT_BASE, QUIT_HOVER, mouse_pos)
 
 		if started:
 			status_surf = font.render("Started!", True, STATUS)
