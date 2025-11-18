@@ -15,7 +15,7 @@ from utils.color import (
 )
 # Import utility functions
 from utils.loading import draw_loading_screen, run_loading_with_callback
-from utils.ui import draw_button
+from utils.ui import draw_button, Button
 from utils.resource_manager import ResourceManager
 
 
@@ -29,101 +29,160 @@ def main():
 	font = pygame.font.SysFont(None, 48)
 	title_font = pygame.font.SysFont(None, 72)
 
-	# Start loading background music immediately (before showing menu)
-	# Prepare resources to load: background and button images
-	# TO-DO(Qianrina): please upload the image assets to the repo
-	images = {
-		"background": os.path.join("assets", "images", "background.png"),
-		"btn_start": os.path.join("assets", "images", "button_start.png"),
-		"btn_quit": os.path.join("assets", "images", "button_quit.png"),
-	}
+	# Resource loading is handled by the Application class below.
+class MenuScene:
+	def __init__(self, app):
+		self.app = app
+		self.screen = app.screen
+		self.font = app.font
+		self.title_font = app.title_font
+		self.res_mgr = app.res_mgr
 
-	res_mgr = ResourceManager(images=images, image_base_dir=None, audio_path=None)
+		# button layout
+		btn_w, btn_h = 260, 96
+		center_x = app.WIDTH // 2
+		center_y = app.HEIGHT // 2
 
-	# Run combined loader (images + audio) with the loading UI
-	run_loading_with_callback(
-		surface=pygame.display.get_surface(),
-		loader=res_mgr.load_all,
-		on_complete=res_mgr.play_music,
-		title="Loading Resources",
-		subtitle="Images and audio",
-	)
+		self.start_rect = pygame.Rect(center_x - btn_w - 20, center_y, btn_w, btn_h)
+		self.quit_rect = pygame.Rect(center_x + 20, center_y, btn_w, btn_h)
 
-	# Button sizes and positions
-    # TO-DO(Qianrina): please update the button sizes and positions if needed
-	btn_w, btn_h = 260, 96
-	center_x = WIDTH // 2
-	center_y = HEIGHT // 2
+		# create Button components (images will be used if available)
+		start_img = self.res_mgr.get_image("btn_start")
+		quit_img = self.res_mgr.get_image("btn_quit")
 
-	start_rect = pygame.Rect(center_x - btn_w - 20, center_y, btn_w, btn_h)
-	quit_rect = pygame.Rect(center_x + 20, center_y, btn_w, btn_h)
+		self.start_button = Button(self.start_rect, text="Start", font=self.font,
+								   base_color=START_BASE, hover_color=START_HOVER, image=start_img)
+		self.quit_button = Button(self.quit_rect, text="Quit", font=self.font,
+								  base_color=QUIT_BASE, hover_color=QUIT_HOVER, image=quit_img)
 
-	base_color = START_BASE
-	hover_color = START_HOVER
+		self.started = False
 
-	running = True
-	started = False
+	def handle_event(self, event):
+		if self.start_button.handle_event(event):
+			# switch to game scene when Start is clicked
+			self.app.scene = GameScene(self.app)
+		if self.quit_button.handle_event(event):
+			self.app.running = False
 
-	while running:
-		mouse_pos = pygame.mouse.get_pos()
+	def update(self, dt):
+		pass
 
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				running = False
-			elif event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					running = False
-			elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-				if start_rect.collidepoint(event.pos):
-					started = True
-				elif quit_rect.collidepoint(event.pos):
-					running = False
-
-		# draw
-		screen.fill(BG)
+	def render(self):
+		# draw background image or color
+		bg_image = self.res_mgr.get_image("background")
+		if bg_image:
+			scaled = pygame.transform.smoothscale(bg_image, (self.app.WIDTH, self.app.HEIGHT))
+			self.screen.blit(scaled, (0, 0))
+		else:
+			self.screen.fill(BG)
 
 		# title
-		title_surf = title_font.render("Main Menu", True, TITLE)
-		title_rect = title_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 140))
-		screen.blit(title_surf, title_rect)
+		title_surf = self.title_font.render("Main Menu", True, TITLE)
+		title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 - 140))
+		self.screen.blit(title_surf, title_rect)
 
-		# draw using loaded images if available, fallback to drawn buttons
-		bg_image = res_mgr.get_image("background")
-		if bg_image:
-			scaled = pygame.transform.smoothscale(bg_image, (WIDTH, HEIGHT))
-			screen.blit(scaled, (0, 0))
-		else:
-			screen.fill(BG)
+		mouse_pos = pygame.mouse.get_pos()
+		self.start_button.draw(self.screen, mouse_pos)
+		self.quit_button.draw(self.screen, mouse_pos)
 
-		start_img = res_mgr.get_image("btn_start")
-		quit_img = res_mgr.get_image("btn_quit")
-
-		if start_img:
-			img_rect = start_img.get_rect(center=start_rect.center)
-			screen.blit(start_img, img_rect)
-		else:
-			draw_button(screen, start_rect, "Start", font, base_color, hover_color, mouse_pos)
-
-		if quit_img:
-			img_rect = quit_img.get_rect(center=quit_rect.center)
-			screen.blit(quit_img, img_rect)
-		else:
-			draw_button(screen, quit_rect, "Quit", font, QUIT_BASE, QUIT_HOVER, mouse_pos)
-
-		if started:
-			status_surf = font.render("Started!", True, STATUS)
-			status_rect = status_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 140))
-			screen.blit(status_surf, status_rect)
+		if self.started:
+			status_surf = self.font.render("Started!", True, STATUS)
+			status_rect = status_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 + 140))
+			self.screen.blit(status_surf, status_rect)
 
 
 
-		pygame.display.flip()
-		clock.tick(60)
+class GameScene:
+	"""A simple placeholder game scene to demonstrate scene switching."""
 
-	pygame.quit()
-	sys.exit()
+	def __init__(self, app):
+		self.app = app
+		self.screen = app.screen
+		self.font = app.font
+		self.title_font = app.title_font
+
+	def handle_event(self, event):
+		if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+			# return to menu
+			self.app.scene = MenuScene(self.app)
+
+	def update(self, dt):
+		pass
+
+	def render(self):
+		# simple visual
+		self.screen.fill((18, 24, 36))
+		txt = self.title_font.render("Game Scene", True, TITLE)
+		rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
+		self.screen.blit(txt, rect)
 
 
-if __name__ == "__main__":
-	main()
+
+class Application:
+	def __init__(self, width=1600, height=900):
+		pygame.init()
+		self.WIDTH = width
+		self.HEIGHT = height
+		self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+		pygame.display.set_caption("2MB - Menu")
+
+		self.clock = pygame.time.Clock()
+		self.font = pygame.font.SysFont(None, 48)
+		self.title_font = pygame.font.SysFont(None, 72)
+
+		# resources
+		images = {
+			"background": os.path.join("assets", "images", "background.png"),
+			"btn_start": os.path.join("assets", "images", "button_start.png"),
+			"btn_quit": os.path.join("assets", "images", "button_quit.png"),
+		}
+		self.res_mgr = ResourceManager(images=images, image_base_dir=None, audio_path=None)
+
+		self.running = True
+		self.scene = None
+
+	def load_resources(self):
+		run_loading_with_callback(
+			surface=self.screen,
+			loader=self.res_mgr.load_all,
+			on_complete=self.res_mgr.finalize_and_play,
+			title="Loading Resources",
+			subtitle="Images and audio",
+		)
+
+	def run(self):
+		# load resources first
+		self.load_resources()
+
+		# create initial scene
+		self.scene = MenuScene(self)
+
+		# main loop
+		while self.running:
+			dt = self.clock.tick(60) / 1000.0
+
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					self.running = False
+				elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+					self.running = False
+				else:
+					if self.scene:
+						self.scene.handle_event(event)
+
+			if self.scene:
+				self.scene.update(dt)
+
+			if self.scene:
+				self.scene.render()
+
+			pygame.display.flip()
+
+		pygame.quit()
+		sys.exit()
+
+
+def main():
+	app = Application()
+	app.run()
 

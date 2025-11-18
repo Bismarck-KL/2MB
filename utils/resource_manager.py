@@ -68,6 +68,15 @@ class ResourceManager:
     def play_music(self):
         self.audio_loader.play()
 
+    def finalize_and_play(self):
+        """Finalize audio on the main thread (initialize mixer and load) and start playback."""
+        try:
+            self.audio_loader.finalize()
+        except Exception:
+            # if finalize fails, skip playback
+            return
+        self.audio_loader.play()
+
     def stop_music(self):
         self.audio_loader.stop()
 

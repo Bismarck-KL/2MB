@@ -23,17 +23,23 @@ class BackgroundMusicLoader:
         loader.play()
     """
 
-    def __init__(self, path: Optional[str] = None, volume: float = 0.5, init_mixer: bool = True):
+    def __init__(self, path: Optional[str] = None, volume: float = 0.5, init_mixer: bool = False):
         self.path = path or os.path.join('assets', 'sounds', 'bgm.mp3')
         self.volume = float(volume)
+        # init_mixer controls whether finalize() will call pygame.mixer.init();
+        # default False so mixer init runs on the main thread via finalize().
         self.init_mixer = bool(init_mixer)
         self._loaded = False
+        # raw bytes buffer when loading happens off-main-thread
+        self._raw_bytes: Optional[bytes] = None
 
     def load(self, report: Optional[Callable[[float], None]] = None, stop_event=None) -> None:
-        """Load the background music file.
+        """Perform file I/O to read the music file into memory.
 
-        report: optional callable(progress_float) to report progress (0..100).
-        stop_event: optional threading.Event to support cancellation.
+        This method is intended to run in a worker thread. It reads the
+        file bytes into memory and reports progress. Actual mixer
+        initialization and passing the data to the mixer must be done on
+        the main thread by calling `finalize()`.
         """
         if report:
             report(5)
@@ -41,27 +47,13 @@ class BackgroundMusicLoader:
         if stop_event is not None and getattr(stop_event, 'is_set', lambda: False)():
             return
 
-        # Initialize mixer if requested. Some platforms prefer init on main thread;
-        # caller can set init_mixer=False and initialize earlier on the main thread.
-        if self.init_mixer:
-            try:
-                pygame.mixer.init()
-            except Exception:
-                # continue and let pygame raise on load if unsupported
-                pass
-
-        if report:
-            report(30)
-
-        if stop_event is not None and getattr(stop_event, 'is_set', lambda: False)():
-            return
-
+        # read file bytes
         try:
-            pygame.mixer.music.load(self.path)
-            pygame.mixer.music.set_volume(self.volume)
-            self._loaded = True
-        except Exception as e:
-            # Re-raise to let caller handle errors
+            with open(self.path, 'rb') as f:
+                data = f.read()
+            self._raw_bytes = data
+        except Exception:
+            # propagate exception to caller/runner
             raise
 
         if report:
@@ -70,16 +62,46 @@ class BackgroundMusicLoader:
     def play(self, loop: bool = True) -> None:
         """Start playback. Call on main thread after load completes."""
         if not self._loaded:
-            # attempt to load synchronously if not loaded
-            try:
-                pygame.mixer.music.load(self.path)
-                pygame.mixer.music.set_volume(self.volume)
-                self._loaded = True
-            except Exception:
-                return
+            # nothing loaded into mixer
+            return
 
         loops = -1 if loop else 0
         pygame.mixer.music.play(loops=loops)
+
+    def finalize(self) -> None:
+        """Finalize loading on the main thread: initialize mixer and load data.
+
+        Must be called on the main thread. Uses the bytes read by `load()` to
+        load into pygame.mixer.music via a BytesIO object.
+        """
+        if self._raw_bytes is None:
+            return
+
+        # initialize mixer on main thread if requested or if mixer isn't initialized
+        try:
+            if self.init_mixer:
+                pygame.mixer.init()
+            else:
+                # ensure mixer is initialized
+                try:
+                    pygame.mixer.get_init()
+                except Exception:
+                    pygame.mixer.init()
+        except Exception:
+            # best-effort: continue and let load raise if unsupported
+            pass
+
+        try:
+            import io
+
+            buf = io.BytesIO(self._raw_bytes)
+            # pygame.mixer.music.load accepts a file-like object in many setups
+            pygame.mixer.music.load(buf)
+            pygame.mixer.music.set_volume(self.volume)
+            self._loaded = True
+        finally:
+            # free raw bytes
+            self._raw_bytes = None
 
     def stop(self) -> None:
         pygame.mixer.music.stop()
