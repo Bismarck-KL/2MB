@@ -1,7 +1,7 @@
 import pygame
 
 from utils.color import TITLE
-
+from menu_scene import MenuScene
 
 class GameScene:
     """A simple placeholder game scene to demonstrate scene switching."""
@@ -15,7 +15,7 @@ class GameScene:
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             # return to menu
-            self.app.scene = __import__("menu_scene", fromlist=["MenuScene"]).MenuScene(self.app)
+            self.app.scene = MenuScene(self.app)
 
     def update(self, dt):
         pass
