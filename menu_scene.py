@@ -2,7 +2,7 @@ import pygame
 
 from utils.color import BG, TITLE, START_BASE, START_HOVER, QUIT_BASE, QUIT_HOVER, STATUS
 from utils.ui import Button
-from game_scene import GameScene
+from avatar_create import AvatarCreateScene
 
 
 class MenuScene:
@@ -55,8 +55,8 @@ class MenuScene:
 
     def handle_event(self, event):
         if self.start_button.handle_event(event):
-            # switch to game scene when Start is clicked
-            self.app.scene = GameScene(self.app)
+            # switch to Avatar Create scene when Start is clicked
+            self.app.scene = AvatarCreateScene(self.app)
         if self.quit_button.handle_event(event):
             self.app.running = False
 
