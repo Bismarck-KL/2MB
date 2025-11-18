@@ -1,0 +1,29 @@
+import pygame
+
+from utils.color import TITLE
+
+
+class GameScene:
+    """A simple placeholder game scene to demonstrate scene switching."""
+
+    def __init__(self, app):
+        self.app = app
+        self.screen = app.screen
+        self.font = app.font
+        self.title_font = app.title_font
+
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            # return to menu
+            self.app.scene = __import__("menu_scene", fromlist=["MenuScene"]).MenuScene(self.app)
+
+    def update(self, dt):
+        pass
+
+    def render(self):
+        # simple visual
+        self.screen.fill((18, 24, 36))
+        txt = self.title_font.render("Game Scene", True, TITLE)
+        rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
+        self.screen.blit(txt, rect)
+

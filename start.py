@@ -18,18 +18,9 @@ from utils.loading import draw_loading_screen, run_loading_with_callback
 from utils.ui import draw_button, Button
 from utils.resource_manager import ResourceManager
 
-
-def main():
-	pygame.init()
-	WIDTH, HEIGHT = 1600, 900
-	screen = pygame.display.set_mode((WIDTH, HEIGHT))
-	pygame.display.set_caption("2MB - Menu")
-
-	clock = pygame.time.Clock()
-	font = pygame.font.SysFont(None, 48)
-	title_font = pygame.font.SysFont(None, 72)
-
-	# Resource loading is handled by the Application class below.
+# scenes are in their own modules to keep this file small
+from menu_scene import MenuScene
+from game_scene import GameScene
 class MenuScene:
 	def __init__(self, app):
 		self.app = app
@@ -154,7 +145,6 @@ class Application:
 		self.scene = None
 
 	def load_resources(self):
-		print("[startup] load_resources() begin")
 		# Quick sanity-draw so the window is visible immediately on some systems
 		try:
 			self.screen.fill(BG)
@@ -173,13 +163,10 @@ class Application:
 			title="Loading Resources",
 			subtitle="Images and audio",
 		)
-		print("[startup] load_resources() end")
 
 	def run(self):
-		print("[app] run() starting")
 		# load resources first
 		self.load_resources()
-		print("[app] load_resources() returned")
 
 		# create initial scene
 		self.scene = MenuScene(self)
@@ -205,7 +192,7 @@ class Application:
 
 			pygame.display.flip()
 
-		print("[app] quitting")
+		# clean shutdown
 		pygame.quit()
 		# Return instead of sys.exit() so stack traces and prints remain visible
 		# when running from an interactive shell or debugger.
