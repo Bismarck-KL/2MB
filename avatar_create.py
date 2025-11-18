@@ -3,7 +3,7 @@ import pygame
 from utils.color import TITLE, QUIT_BASE, QUIT_HOVER
 from utils.ui import Button
 
-
+# TO-DO(FAMA): implement actual avatar creation flow and UI
 class AvatarCreateScene:
     """A simple placeholder game scene to demonstrate scene switching.
 
