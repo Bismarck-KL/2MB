@@ -5,7 +5,7 @@ Provides reusable UI drawing functions such as draw_button.
 import pygame
 from typing import Tuple
 
-from util.color import WHITE
+from utils.color import WHITE
 
 
 def draw_button(
