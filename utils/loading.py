@@ -15,7 +15,7 @@ import pygame
 import threading
 from typing import Tuple, Optional, Callable
 
-from utils.color import BG, TITLE, START_BASE, START_HOVER, QUIT_BASE, WHITE, STATUS
+from utils.color import BG, TITLE, START_BASE, WHITE, STATUS
 
 
 def draw_loading_bar(
