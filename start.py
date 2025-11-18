@@ -8,7 +8,6 @@ from utils.resource_manager import ResourceManager
 
 # scenes are in their own modules to keep this file small
 from menu_scene import MenuScene
-from game_scene import GameScene
 
 
 class Application:
