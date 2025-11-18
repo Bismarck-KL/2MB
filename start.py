@@ -8,18 +8,9 @@ from util.color import (
 	START_HOVER,
 	QUIT_BASE,
 	QUIT_HOVER,
-	WHITE,
 	STATUS,
 )
-
-
-def draw_button(surface, rect, text, font, base_color, hover_color, mouse_pos):
-	color = hover_color if rect.collidepoint(mouse_pos) else base_color
-	pygame.draw.rect(surface, color, rect, border_radius=8)
-	# draw text centered
-	txt_surf = font.render(text, True, WHITE)
-	txt_rect = txt_surf.get_rect(center=rect.center)
-	surface.blit(txt_surf, txt_rect)
+from util.ui import draw_button
 
 
 def main():
