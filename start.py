@@ -47,8 +47,15 @@ class MenuScene:
 		self.quit_rect = pygame.Rect(center_x + 20, center_y, btn_w, btn_h)
 
 		# create Button components (images will be used if available)
-		start_img = self.res_mgr.get_image("btn_start")
-		quit_img = self.res_mgr.get_image("btn_quit")
+		# get images defensively (loader may have set None for missing files)
+		try:
+			start_img = self.res_mgr.get_image("btn_start")
+		except Exception:
+			start_img = None
+		try:
+			quit_img = self.res_mgr.get_image("btn_quit")
+		except Exception:
+			quit_img = None
 
 		self.start_button = Button(self.start_rect, text="Start", font=self.font,
 								   base_color=START_BASE, hover_color=START_HOVER, image=start_img)
@@ -69,11 +76,16 @@ class MenuScene:
 
 	def render(self):
 		# draw background image or color
-		bg_image = self.res_mgr.get_image("background")
-		if bg_image:
-			scaled = pygame.transform.smoothscale(bg_image, (self.app.WIDTH, self.app.HEIGHT))
-			self.screen.blit(scaled, (0, 0))
-		else:
+		try:
+			bg_image = self.res_mgr.get_image("background")
+			if bg_image:
+				# protect against invalid surfaces
+				scaled = pygame.transform.smoothscale(bg_image, (self.app.WIDTH, self.app.HEIGHT))
+				self.screen.blit(scaled, (0, 0))
+			else:
+				self.screen.fill(BG)
+		except Exception:
+			# fallback: plain background color
 			self.screen.fill(BG)
 
 		# title
@@ -142,6 +154,18 @@ class Application:
 		self.scene = None
 
 	def load_resources(self):
+		print("[startup] load_resources() begin")
+		# Quick sanity-draw so the window is visible immediately on some systems
+		try:
+			self.screen.fill(BG)
+			init_surf = self.title_font.render("Initializing...", True, TITLE)
+			self.screen.blit(init_surf, init_surf.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2)))
+			pygame.display.flip()
+			# small pause to allow window manager to show the window
+			pygame.time.delay(250)
+		except Exception:
+			pass
+
 		run_loading_with_callback(
 			surface=self.screen,
 			loader=self.res_mgr.load_all,
@@ -149,10 +173,13 @@ class Application:
 			title="Loading Resources",
 			subtitle="Images and audio",
 		)
+		print("[startup] load_resources() end")
 
 	def run(self):
+		print("[app] run() starting")
 		# load resources first
 		self.load_resources()
+		print("[app] load_resources() returned")
 
 		# create initial scene
 		self.scene = MenuScene(self)
@@ -178,11 +205,25 @@ class Application:
 
 			pygame.display.flip()
 
+		print("[app] quitting")
 		pygame.quit()
-		sys.exit()
+		# Return instead of sys.exit() so stack traces and prints remain visible
+		# when running from an interactive shell or debugger.
+		return
 
 
 def main():
 	app = Application()
-	app.run()
+	try:
+		app.run()
+	except Exception:
+		# Ensure any unexpected exceptions are printed to the console for debugging
+		import traceback
+
+		traceback.print_exc()
+		raise
+
+
+if __name__ == "__main__":
+	main()
 
