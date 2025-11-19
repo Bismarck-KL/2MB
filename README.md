@@ -1,15 +1,18 @@
-# 2D角色动画系统
+# 2D Character Animation System
 
-基于Pygame的2D骨骼动画系统，支持角色姿势切换和平滑动画过渡。
+Pygame-based 2D skeletal animation system with character pose switching and smooth animation transitions.
 
-## 功能特性
+## Features
 
-- ✅ 图片分割：根据预定义区域自动分割身体部位
-- ✅ 骨骼系统：父子层级关系的身体部位管理
-- ✅ 多种姿势：T-Pose、准备、出拳、踢腿
-- ✅ 平滑过渡：姿势之间的缓动动画
-- ✅ 键盘控制：实时切换动作
-- ✅ 可替换角色：支持更换不同的角色图片
+- ✅ Image Slicing: Automatic body part segmentation based on predefined regions
+- ✅ Skeletal System: Parent-child hierarchical body part management
+- ✅ Multiple Poses: Block, Ready, Punch, Kick, Jump, Custom
+- ✅ Smooth Transitions: Easing animations between poses
+- ✅ Keyboard Controls: Real-time action switching
+- ✅ Character Replacement: Support for different character images
+- ✅ **Pixel Art Converter: Transform any image into 8-bit pixel art style**
+- ✅ Pose Adjustment Tool: Visual pose editor with direct save to code
+- ✅ Hot-Reload: Press F6 to reload poses without restarting
 
 ## 安装依赖
 
@@ -23,28 +26,92 @@ pip install pygame
 python main.py
 ```
 
-## 控制说明
+## Controls
 
-- **1** - T-Pose姿势（初始姿势）
-- **2** - 准备姿势（战斗准备）
-- **3** 或 **P** - 出拳动作
-- **4** 或 **K** - 踢腿动作
-- **ESC** - 退出程序
+- **1** or **B** - Block pose (auto-return)
+- **2** - Ready pose (battle stance)
+- **3** or **P** - Punch action (auto-return)
+- **4** or **K** - Kick action (auto-return)
+- **Space** or **J** - Jump action (auto-return)
+- **F5** or **L** - Load custom pose
+- **F6** - Hot-reload all poses
+- **ESC** - Quit
 
-## 文件结构
+## 🎨 NEW: Pixel Art Converter
+
+Transform any character image into retro 8-bit pixel art style!
+
+### Quick Start
+```bash
+# Simple pixelation
+python pixelate_image.py
+
+# Advanced with custom palette
+python pixelate_advanced.py
+```
+
+### Features
+- **Automatic color palette extraction** - Smart color reduction
+- **Pixel size control** - From chunky 16x16 to fine 4x4
+- **Outline generation** - Add black borders for clarity
+- **Dithering support** - Smoother gradients
+- **Before/After preview** - See the transformation
+
+### Pixelation Styles
+
+#### Style 1: Classic 8-bit (Recommended)
+```bash
+python pixelate_advanced.py
+# Select option 1
+# Pixel size: 8x8, Colors: 16, Outline: Yes
+```
+Perfect for retro Mario/Zelda style!
+
+#### Style 2: Retro 16-bit
+```bash
+# Select option 2
+# Pixel size: 4x4, Colors: 32, Outline: Yes
+```
+More detailed, SNES-era graphics
+
+#### Style 3: Chunky Pixel
+```bash
+# Select option 3
+# Pixel size: 16x16, Colors: 12, Outline: Yes
+```
+Bold, high-contrast pixel art
+
+### Usage Example
+```bash
+# Convert your character
+python pixelate_advanced.py
+# Input: sample/tpose.png
+# Output: sample/tpose_8bit.png
+
+# The system will auto-detect and use pixelated version!
+python main.py
+```
+
+## File Structure
 
 ```
 motion test_3/
-├── main.py              # 主程序入口
-├── body_parts.py        # 身体部位分割定义
-├── skeleton.py          # 骨骼系统和变换
-├── animation.py         # 动画控制和姿势数据
+├── main.py                 # Main game loop
+├── body_parts.py          # Body part slicing definitions
+├── skeleton.py            # Skeletal system and transforms
+├── animation.py           # Animation controller and pose data
+├── pose_tool.py           # Visual pose adjustment tool
+├── pixelate_image.py      # Simple pixelation tool
+├── pixelate_advanced.py   # Advanced pixel art converter ⭐
+├── update_animation.py    # Direct pose-to-code updater
 ├── sample/
-│   ├── tpose.png       # T-Pose原始图片
-│   ├── slice_sample.png # 分割参考图
-│   ├── punch.png       # 出拳参考图
-│   └── kick.png        # 踢腿参考图
-└── README.md           # 说明文档
+│   ├── tpose.png         # Original T-pose image
+│   ├── tpose_8bit.png    # Pixelated version (auto-generated)
+│   ├── slice_sample.png  # Slicing reference
+│   ├── punch.png         # Punch reference
+│   └── kick.png          # Kick reference
+├── pose_*.json           # Saved pose configurations
+└── README.md             # Documentation
 ```
 
 ## 如何替换角色
