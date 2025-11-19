@@ -1,0 +1,15 @@
+# block姿势配置
+
+def get_block():
+    return {
+        'torso': {'rotation': 0, 'position': [0, 7]},
+        'head': {'rotation': 0, 'position': [0, -70]},
+        'left_upper_arm': {'rotation': -45, 'position': [-76, -68]},
+        'left_forearm': {'rotation': -155, 'position': [-36, 31]},
+        'right_upper_arm': {'rotation': 45, 'position': [76, -68]},
+        'right_forearm': {'rotation': 155, 'position': [36, 31]},
+        'left_thigh': {'rotation': 5, 'position': [-44, 88]},
+        'left_shin': {'rotation': -10, 'position': [-11, 72]},
+        'right_thigh': {'rotation': -5, 'position': [44, 88]},
+        'right_shin': {'rotation': 10, 'position': [11, 72]},
+    }

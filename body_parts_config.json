@@ -1,0 +1,62 @@
+{
+    "head": {
+        "x": 462,
+        "y": 65,
+        "width": 104,
+        "height": 104
+    },
+    "torso": {
+        "x": 447,
+        "y": 172,
+        "width": 133,
+        "height": 160
+    },
+    "left_upper_arm": {
+        "x": 380,
+        "y": 161,
+        "width": 65,
+        "height": 74
+    },
+    "left_forearm": {
+        "x": 218,
+        "y": 161,
+        "width": 160,
+        "height": 75
+    },
+    "right_upper_arm": {
+        "x": 583,
+        "y": 161,
+        "width": 65,
+        "height": 74
+    },
+    "right_forearm": {
+        "x": 650,
+        "y": 161,
+        "width": 160,
+        "height": 75
+    },
+    "left_thigh": {
+        "x": 433,
+        "y": 363,
+        "width": 79,
+        "height": 113
+    },
+    "left_shin": {
+        "x": 431,
+        "y": 485,
+        "width": 72,
+        "height": 169
+    },
+    "right_thigh": {
+        "x": 516,
+        "y": 363,
+        "width": 79,
+        "height": 113
+    },
+    "right_shin": {
+        "x": 525,
+        "y": 485,
+        "width": 72,
+        "height": 169
+    }
+}
