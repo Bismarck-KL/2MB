@@ -73,21 +73,53 @@ class BodyPart:
             child.update_transform(root_base_position)
 
     def draw(self, surface):
-        """Draw this part and all child parts"""
+        """Draw this part and all child parts with layering"""
+        # Define draw order
+        back_parts = ['left_upper_arm', 'right_upper_arm',
+                      'left_thigh', 'right_thigh']
+        # Forearms in front of torso
+        front_parts = ['left_forearm', 'right_forearm']
+
+        # Layer 1: Draw upper arms and thighs (behind torso) - but NOT their forearm children
+        for child in self.children:
+            if child.name in back_parts:
+                self._draw_self_only(child, surface)
+                # Draw leg children (shins) immediately since they stay behind
+                if 'thigh' in child.name:
+                    for grandchild in child.children:
+                        grandchild.draw(surface)
+
+        # Layer 2: Draw this part (torso)
+        self._draw_self_only(self, surface)
+
+        # Layer 3: Draw head (behind forearms)
+        for child in self.children:
+            if child.name == 'head':
+                child.draw(surface)
+
+        # Layer 4: Draw forearms (in front of torso and head)
+        for child in self.children:
+            if child.name in back_parts and 'arm' in child.name:
+                for grandchild in child.children:
+                    if grandchild.name in front_parts:
+                        grandchild.draw(surface)
+
+    def _draw_self_only(self, part, surface):
+        """Draw only this part, not its children"""
         # Rotate image (around pivot point)
         rotated_image = pygame.transform.rotate(
-            self.image, -self.world_rotation)
+            part.image, -part.world_rotation)
         rotated_rect = rotated_image.get_rect()
 
         # Calculate pivot point position relative to image top-left corner
-        pivot_x, pivot_y = self.pivot_offset
+        pivot_x, pivot_y = part.pivot_offset
 
         # Calculate new position of pivot point after rotation
-        angle_rad = math.radians(self.world_rotation)
+        angle_rad = math.radians(part.world_rotation)
 
         # Pivot offset relative to original image center
-        offset_x = pivot_x - self.image.get_width() / 2
-        offset_y = pivot_y - self.image.get_height() / 2
+        offset_x = pivot_x - part.image.get_width() / 2
+        offset_y = pivot_y - part.image.get_height() / 2
 
         # Offset after rotation
         rot_offset_x = offset_x * \
@@ -96,15 +128,11 @@ class BodyPart:
             math.sin(angle_rad) + offset_y * math.cos(angle_rad)
 
         # Final draw position
-        draw_x = self.world_position[0] - rotated_rect.width / 2 - rot_offset_x
-        draw_y = self.world_position[1] - \
+        draw_x = part.world_position[0] - rotated_rect.width / 2 - rot_offset_x
+        draw_y = part.world_position[1] - \
             rotated_rect.height / 2 - rot_offset_y
 
         surface.blit(rotated_image, (draw_x, draw_y))
-
-        # Recursively draw child parts
-        for child in self.children:
-            child.draw(surface)
 
 
 class Skeleton:

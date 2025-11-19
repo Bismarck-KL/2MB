@@ -169,11 +169,11 @@ class Poses:
             'jump': Poses.get_jump()
         }
 
-        # 尝试加载自定义姿势（仅作为独立的第5个姿势）
+        # Try to load custom pose (as independent 5th pose)
         custom_pose = Poses.load_custom_pose('custom')
         if custom_pose:
             poses['custom'] = custom_pose
-            print("✓ 已加载自定义姿势")
+            print("✓ Loaded custom pose")
 
         return poses
 

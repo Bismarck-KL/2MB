@@ -366,33 +366,40 @@ class CharacterAnimator:
 def main():
     """Main function"""
     import os
-    
-    # Check for pixelated versions (check all possible names)
-    pixel_versions = [
-        "sample/tpose_8bit.png",      # From pixelate_advanced.py
-        "sample/tpose_16bit.png",
-        "sample/tpose_chunky.png",
-        "sample/tpose_custom.png",
-        "sample/tpose_pixel8.png",    # From pixelate_image.py
-        "sample/tpose_pixel16.png",
-        "sample/tpose_pixel4.png"
-    ]
-    
-    available_images = ["sample/tpose.png"]
-    for pv in pixel_versions:
-        if os.path.exists(pv):
-            available_images.append(pv)
-    
-    # Use pixelated version if available, otherwise use original
-    image_path = available_images[-1] if len(available_images) > 1 else "sample/tpose.png"
-    
-    if len(available_images) > 1:
-        print(f"✓ Using pixelated image: {image_path}")
-        print(f"  Found {len(available_images)-1} pixelated version(s)")
-    else:
-        print(f"Using original image: {image_path}")
-        print("Tip: Run 'python pixelate_advanced.py' to create 8-bit pixel art!")
-    
+
+    # Priority order: assets/pixelated > assets/photo > sample
+    image_path = None
+
+    # 1. Check pixelated folder first (highest priority)
+    if os.path.exists("assets/pixelated"):
+        for file in os.listdir("assets/pixelated"):
+            if file.lower().endswith(('.png', '.jpg', '.jpeg')) and 'tpose' in file.lower():
+                image_path = os.path.join("assets/pixelated", file)
+                print(f"✓ Using pixelated image: {image_path}")
+                break
+
+    # 2. If no pixelated version, check assets/photo
+    if not image_path and os.path.exists("assets/photo"):
+        for file in os.listdir("assets/photo"):
+            if file.lower().endswith(('.png', '.jpg', '.jpeg')) and 'tpose' in file.lower():
+                image_path = os.path.join("assets/photo", file)
+                print(f"Using original image: {image_path}")
+                print("💡 Tip: Run 'python auto_watch.py' to auto-generate pixel art!")
+                break
+
+    # 3. Fallback to sample folder
+    if not image_path:
+        if os.path.exists("sample/tpose.png"):
+            image_path = "sample/tpose.png"
+            print(f"Using sample image: {image_path}")
+            print("💡 Tip: Place your tpose image in 'assets/photo' folder!")
+        else:
+            print("❌ Error: No tpose image found!")
+            print("   Please place a tpose image in one of these folders:")
+            print("   - assets/photo/ (for auto-conversion)")
+            print("   - sample/")
+            sys.exit(1)
+
     # Create game instance
     game = CharacterAnimator(image_path)
 
