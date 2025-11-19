@@ -1,0 +1,15 @@
+# ready pose configuration
+
+def get_ready():
+    return {
+        'torso': {'rotation': 0, 'position': [0, 2]},
+        'head': {'rotation': 0, 'position': [0, -70]},
+        'left_upper_arm': {'rotation': -50, 'position': [-76, -69]},
+        'left_forearm': {'rotation': -45, 'position': [-56, 35]},
+        'right_upper_arm': {'rotation': 50, 'position': [76, -69]},
+        'right_forearm': {'rotation': 45, 'position': [56, 35]},
+        'left_thigh': {'rotation': 0, 'position': [-39, 74]},
+        'left_shin': {'rotation': 0, 'position': [-7, 90]},
+        'right_thigh': {'rotation': 0, 'position': [39, 74]},
+        'right_shin': {'rotation': 0, 'position': [7, 90]},
+    }
