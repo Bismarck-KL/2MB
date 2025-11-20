@@ -262,26 +262,13 @@ def load_pose(pose_name):
 
 
 def save_pose():
-    """Save current pose"""
-    pose = get_current_pose()
-
-    # Save as JSON
-    with open(f'pose_{current_pose_name}.json', 'w', encoding='utf-8') as f:
-        json.dump(pose, f, indent=4, ensure_ascii=False)
-
-    # Generate Python code
-    code = f"# {current_pose_name} pose configuration\n\n"
-    code += f"def get_{current_pose_name}():\n"
-    code += "    return {\n"
-    for name, data in pose.items():
-        code += f"        '{name}': {{'rotation': {data['rotation']}, 'position': {data['position']}}},\n"
-    code += "    }\n"
-
-    with open(f'pose_{current_pose_name}.py', 'w', encoding='utf-8') as f:
-        f.write(code)
-
-    print(
-        f"✓ Saved pose '{current_pose_name}' to pose_{current_pose_name}.py and .json")
+    """Save current pose (deprecated - use save_and_update_animation instead)
+    
+    This function is kept for backward compatibility but does nothing now.
+    Use P key (save_and_update_animation) to properly save poses.
+    """
+    # Do nothing - this prevents accidental file generation
+    # Users should use P key to save poses properly
     return True
 
 
@@ -290,12 +277,10 @@ running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            save_pose()
             running = False
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                save_pose()
                 running = False
 
             # 切换选中部位
@@ -369,13 +354,7 @@ while running:
             elif event.key == pygame.K_r:
                 skeleton.parts[selected_part].local_rotation = 0
 
-            # Save
-            elif event.key == pygame.K_RETURN:
-                if save_pose():
-                    save_message = f"✓ Saved pose: {current_pose_name}"
-                    save_message_timer = 180
-
-            # P key: save and directly update animation.py
+            # P key: save and directly update animation.py (ENTER key disabled)
             elif event.key == pygame.K_p:
                 # Determine which function to update based on current pose
                 pose_map = {'ready': 'ready', 'punch': 'punch',
