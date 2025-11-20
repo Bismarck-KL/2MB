@@ -49,7 +49,26 @@ class Application:
 		cls = self.scene_registry.get(scene_name)
 		if not cls:
 			return
+
+		# call on_exit on current scene if provided
+		old_scene = self.scene
+		try:
+			if old_scene and hasattr(old_scene, "on_exit"):
+				old_scene.on_exit()
+		except Exception:
+			# don't let cleanup errors break scene switching
+			pass
+
+		# instantiate new scene
 		self.scene = cls(self)
+
+		# call on_enter hook if provided
+		try:
+			if self.scene and hasattr(self.scene, "on_enter"):
+				self.scene.on_enter()
+		except Exception:
+			# if the new scene fails to initialize hooks, keep running
+			pass
 
 	def load_resources(self):
 		# Quick sanity-draw so the window is visible immediately on some systems
