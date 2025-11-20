@@ -6,6 +6,7 @@ import pygame
 from typing import Tuple, Optional
 
 from utils.color import WHITE
+from utils.color import HEALTH, HEALTH_BG, HEALTH_BORDER, HEALTH_YELLOW, HEALTH_RED
 
 
 def draw_button(
@@ -75,4 +76,52 @@ class Button:
         return False
 
 
-__all__ = ["draw_button", "Button"]
+def draw_health_bar(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    current: float,
+    maximum: float,
+    fg_color=HEALTH,
+    bg_color=HEALTH_BG,
+    border_color=HEALTH_BORDER,
+    border_radius: int = 4,
+):
+    """Draw a horizontal health bar inside `rect`.
+
+    - `current` and `maximum` can be ints or floats. Values are clamped.
+    - Bar fills from left to right.
+    """
+    try:
+        pct = 0.0
+        if maximum and maximum > 0:
+            pct = max(0.0, min(1.0, float(current) / float(maximum)))
+
+        # dynamic foreground color when caller uses default HEALTH
+        if fg_color == HEALTH:
+            if pct < 0.3:
+                fg = HEALTH_RED
+            elif pct < 0.5:
+                fg = HEALTH_YELLOW
+            else:
+                fg = HEALTH
+        else:
+            fg = fg_color
+
+        # outer border
+        pygame.draw.rect(surface, border_color, rect, border_radius=border_radius)
+
+        # inner background (shrink by 2 px to show border)
+        inner = rect.inflate(-4, -4)
+        pygame.draw.rect(surface, bg_color, inner, border_radius=max(0, border_radius - 1))
+
+        # filled portion
+        fill_w = max(0, int(inner.width * pct))
+        if fill_w > 0:
+            fill_rect = pygame.Rect(inner.x, inner.y, fill_w, inner.height)
+            pygame.draw.rect(surface, fg, fill_rect, border_radius=max(0, border_radius - 1))
+    except Exception:
+        # don't crash UI if drawing fails
+        pass
+
+
+__all__ = ["draw_button", "Button", "draw_health_bar"]
