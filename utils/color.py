@@ -19,6 +19,10 @@ START_HOVER = (65, 150, 255)
 QUIT_BASE = (200, 40, 40)
 QUIT_HOVER = (220, 70, 70)
 
+# Next button
+NEXT_BASE = (30, 144, 255)  # dodgerblue
+NEXT_HOVER = (65, 150, 255) 
+
 # Misc
 STATUS = (200, 200, 200)
 
@@ -38,6 +42,8 @@ COLORS = {
     "start_hover": START_HOVER,
     "quit_base": QUIT_BASE,
     "quit_hover": QUIT_HOVER,
+    "next_base": NEXT_BASE,
+    "next_hover": NEXT_HOVER,
     "status": STATUS,
     "health": HEALTH,
     "health_bg": HEALTH_BG,
@@ -55,6 +61,8 @@ __all__ = [
     "START_HOVER",
     "QUIT_BASE",
     "QUIT_HOVER",
+    "NEXT_BASE",
+    "NEXT_HOVER",
     "STATUS",
     "HEALTH",
     "HEALTH_BG",
