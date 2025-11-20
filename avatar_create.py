@@ -1,6 +1,6 @@
 import pygame
 
-from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER
+from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, NEXT_BASE, NEXT_HOVER
 from utils.ui import Button
 
 
@@ -28,6 +28,19 @@ class AvatarCreateScene:
             hover_color=QUIT_HOVER,
         )
 
+        # next button (top-right) - navigate to GameScene
+        next_w, next_h = 140, 48
+        next_x = self.app.WIDTH - 20 - next_w
+        next_y = 20
+        self.next_rect = pygame.Rect(next_x, next_y, next_w, next_h)
+        self.next_button = Button(
+            self.next_rect,
+            text="Next",
+            font=self.font,
+            base_color=NEXT_BASE,
+            hover_color=NEXT_HOVER,
+        )
+
     def handle_event(self, event):
         # keyboard: Esc returns to menu
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -36,6 +49,10 @@ class AvatarCreateScene:
         # back button click
         if self.back_button.handle_event(event):
             self.app.change_scene("MenuScene")
+
+        # next button click -> go to GameScene
+        if self.next_button.handle_event(event):
+            self.app.change_scene("GameScene")
 
     def update(self, dt):
         pass
@@ -65,3 +82,5 @@ class AvatarCreateScene:
         # draw back button
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
+        # draw next button
+        self.next_button.draw(self.screen, mouse_pos)
