@@ -4,6 +4,17 @@ from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, HEALTH, HEALTH_BG
 from utils.ui import Button, draw_health_bar
 from classes.player import Player
 
+# mediapipe capture helpers
+try:
+    from utils.mediapipe_capture import start_mediapipe_capture, stop_mediapipe_capture
+except Exception:
+    # allow project to run even if opencv/mediapipe not available at import time
+    def start_mediapipe_capture():
+        print("start_mediapipe_capture: mediapipe capture not available")
+
+    def stop_mediapipe_capture():
+        pass
+
 
 class GameScene:
     """A simple placeholder game scene to demonstrate scene switching."""
@@ -30,6 +41,20 @@ class GameScene:
         self.player_1 = Player(app, 0, image_key="player1")
         # create player 2 at the bottom right
         self.player_2 = Player(app, 1, image_key="player2")
+
+    def on_enter(self):
+        """Called when the scene becomes active. Start mediapipe capture in a new window."""
+        try:
+            start_mediapipe_capture()
+        except Exception as e:
+            print("GameScene: failed to start mediapipe capture:", e)
+
+    def on_exit(self):
+        """Called when leaving the scene. Stop the mediapipe capture."""
+        try:
+            stop_mediapipe_capture()
+        except Exception:
+            pass
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
