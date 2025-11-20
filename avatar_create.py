@@ -16,6 +16,7 @@ class AvatarCreateScene:
         self.screen = app.screen
         self.font = app.font
         self.title_font = app.title_font
+        self.res_mgr = app.res_mgr
 
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
@@ -43,7 +44,7 @@ class AvatarCreateScene:
 
         # draw background image or color
         try:
-            bg_image = self.res_mgr.get_image("menu_background")
+            bg_image = self.res_mgr.get_image("avatar_create_background")
             if bg_image:
                 # protect against invalid surfaces
                 scaled = pygame.transform.smoothscale(
