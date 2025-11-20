@@ -2,6 +2,7 @@ import pygame
 
 from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER
 from utils.ui import Button
+from classes.player import Player
 
 
 class GameScene:
@@ -24,6 +25,12 @@ class GameScene:
             hover_color=QUIT_HOVER,
         )
 
+        # player entity
+        # create player 1 at the bottom left
+        self.player_1 = Player(app, 0, image_key="player1")
+        # create player 2 at the bottom right
+        self.player_2 = Player(app, 1, image_key="player2")
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             # return to menu
@@ -34,7 +41,9 @@ class GameScene:
             self.app.change_scene("MenuScene")
 
     def update(self, dt):
-        pass
+        # update player
+        self.player_1.update(dt)
+        self.player_2.update(dt)    
 
     def render(self):
         # simple visual
@@ -60,3 +69,7 @@ class GameScene:
         # draw back button
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
+
+        # draw player on top
+        self.player_1.draw(self.screen)
+        self.player_2.draw(self.screen)
