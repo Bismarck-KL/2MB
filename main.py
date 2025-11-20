@@ -536,35 +536,42 @@ def main():
     # Priority order: assets/pixelated > assets/photo > sample
     image_path = None
 
-    # 1. Check pixelated folder first (highest priority)
-    if os.path.exists("assets/pixelated"):
-        for file in os.listdir("assets/pixelated"):
-            if file.lower().endswith(('.png', '.jpg', '.jpeg')) and 'tpose' in file.lower():
-                image_path = os.path.join("assets/pixelated", file)
-                print(f"✓ Using pixelated image: {image_path}")
-                break
+    # 1. Check assets/photo folder first (any image file)
+    if os.path.exists("assets/photo"):
+        files = [f for f in os.listdir("assets/photo") 
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+        if files:
+            # Use the first image found
+            image_path = os.path.join("assets/photo", files[0])
+            print(f"✓ Using image: {image_path}")
+            if len(files) > 1:
+                print(f"  (Found {len(files)} images, using first one)")
 
-    # 2. If no pixelated version, check assets/photo
-    if not image_path and os.path.exists("assets/photo"):
-        for file in os.listdir("assets/photo"):
-            if file.lower().endswith(('.png', '.jpg', '.jpeg')) and 'tpose' in file.lower():
-                image_path = os.path.join("assets/photo", file)
-                print(f"Using original image: {image_path}")
-                print("💡 Tip: Run 'python auto_watch.py' to auto-generate pixel art!")
-                break
+    # 2. Check pixelated folder as fallback
+    if not image_path and os.path.exists("assets/pixelated"):
+        files = [f for f in os.listdir("assets/pixelated")
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+        if files:
+            image_path = os.path.join("assets/pixelated", files[0])
+            print(f"✓ Using pixelated image: {image_path}")
 
     # 3. Fallback to sample folder
-    if not image_path:
-        if os.path.exists("sample/tpose.png"):
-            image_path = "sample/tpose.png"
+    if not image_path and os.path.exists("sample"):
+        files = [f for f in os.listdir("sample")
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+        if files:
+            image_path = os.path.join("sample", files[0])
             print(f"Using sample image: {image_path}")
-            print("💡 Tip: Place your tpose image in 'assets/photo' folder!")
-        else:
-            print("❌ Error: No tpose image found!")
-            print("   Please place a tpose image in one of these folders:")
-            print("   - assets/photo/ (for auto-conversion)")
-            print("   - sample/")
-            sys.exit(1)
+
+    # 4. No image found
+    if not image_path:
+        print("❌ Error: No image found!")
+        print("   Please place your character image in:")
+        print("   - assets/photo/ (recommended)")
+        print("   - assets/pixelated/ (for pre-pixelated images)")
+        print("   - sample/ (fallback)")
+        print("   Supported formats: PNG, JPG, JPEG, BMP, GIF, WEBP")
+        sys.exit(1)
 
     # Create game instance
     game = CharacterAnimator(image_path)

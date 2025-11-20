@@ -16,7 +16,15 @@ pygame.init()
 temp_screen = pygame.display.set_mode((100, 100))
 
 # 加载原始图片
-original_image = pygame.image.load("assets/photo/tpose.png").convert_alpha()
+import glob
+photo_files = glob.glob("assets/photo/*.*")
+image_files = [f for f in photo_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+if not image_files:
+    print("Error: No image found in assets/photo/")
+    sys.exit(1)
+image_path = image_files[0]
+print(f"Loading image: {image_path}")
+original_image = pygame.image.load(image_path).convert_alpha()
 img_width = original_image.get_width()
 img_height = original_image.get_height()
 
