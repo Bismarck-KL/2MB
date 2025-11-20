@@ -29,7 +29,7 @@ class Application:
 		images = {
 			"background": os.path.join("assets", "images", "background.jpg"),
 			"game_background": os.path.join("assets", "images", "game_background.jpg"),
-			"menu_background": os.path.join("assets", "images", "menu_background.jpg"),
+			"avatar_create_background": os.path.join("assets", "images", "avatar_create_background.jpg"),
             "btn_start": os.path.join("assets", "images", "button_start.png"),
 			"btn_quit": os.path.join("assets", "images", "button_quit.png"),
 		}
