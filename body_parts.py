@@ -1,11 +1,11 @@
 """
-Body part slicing module
-Defines bounding boxes for body parts based on provided slice sample image
+身体部位分割模块
+根据提供的切片样本图片定义身体各部位的边界框
 """
 
 
 class BodyParts:
-    """Defines slice regions for body parts (based on colored boxes in slice_sample.png)"""
+    """定义身体各部位的分割区域（基于slice_sample.png的彩色框）"""
 
     def __init__(self):
         self.head = (462, 65, 104, 104)
@@ -20,7 +20,7 @@ class BodyParts:
         self.right_shin = (525, 485, 72, 169)
 
     def get_all_parts(self):
-        """Return dictionary of all body parts"""
+        """返回所有身体部位的字典"""
         return {
             'head': self.head,
             'torso': self.torso,
