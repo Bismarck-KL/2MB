@@ -135,6 +135,30 @@ class Poses:
         }
 
     @staticmethod
+    def get_hurt():
+        """Hurt pose - recoiling from damage"""
+        return {
+            'torso': {'rotation': -15, 'position': [5, 10]},
+            'head': {'rotation': -10, 'position': [-5, -68]},
+
+            # Left arm
+            'left_upper_arm': {'rotation': -60, 'position': [-70, -65]},
+            'left_forearm': {'rotation': -90, 'position': [-45, 40]},
+
+            # Right arm
+            'right_upper_arm': {'rotation': 30, 'position': [80, -60]},
+            'right_forearm': {'rotation': 70, 'position': [50, 40]},
+
+            # Left leg
+            'left_thigh': {'rotation': 10, 'position': [-38, 76]},
+            'left_shin': {'rotation': -5, 'position': [-8, 88]},
+
+            # Right leg
+            'right_thigh': {'rotation': -10, 'position': [42, 76]},
+            'right_shin': {'rotation': 5, 'position': [8, 88]}
+        }
+
+    @staticmethod
     def load_custom_pose(pose_name):
         """从JSON文件加载自定义姿势
 
@@ -166,7 +190,8 @@ class Poses:
             'ready': Poses.get_ready(),
             'punch': Poses.get_punch(),
             'kick': Poses.get_kick(),
-            'jump': Poses.get_jump()
+            'jump': Poses.get_jump(),
+            'hurt': Poses.get_hurt()
         }
 
         # Try to load custom pose (as independent 5th pose)
@@ -198,7 +223,7 @@ class AnimationController:
         self.return_delay = 8
         self.return_timer = 0
         self.action_poses = ['punch', 'kick',
-                             'jump', 'block', 'custom']  # Poses that auto-return
+                             'jump', 'block', 'hurt', 'custom']  # Poses that auto-return
 
         # Idle animation (subtle sway in ready pose)
         self.idle_time = 0

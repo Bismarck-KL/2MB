@@ -1,6 +1,7 @@
 """
 Main game file
 2D skeletal animation system using Pygame
+With real-time pixelate effect (Method B)
 """
 
 import pygame
@@ -8,6 +9,79 @@ import sys
 from body_parts import BodyParts
 from skeleton import Skeleton, BodyPart
 from animation import AnimationController
+from collections import Counter
+
+
+def get_dominant_colors(surface, num_colors=16):
+    """Extract dominant colors from image"""
+    width, height = surface.get_size()
+    colors = []
+
+    for x in range(0, width, max(1, width // 10)):
+        for y in range(0, height, max(1, height // 10)):
+            color = surface.get_at((x, y))
+            if color.a > 128:
+                colors.append((color.r, color.g, color.b))
+
+    if not colors:
+        return [(0, 0, 0)]
+
+    color_counter = Counter(colors)
+    return [c for c, _ in color_counter.most_common(num_colors)]
+
+
+def find_nearest_color(color, palette):
+    """Find closest color in palette"""
+    r, g, b = color[:3]
+    min_dist = float('inf')
+    nearest = palette[0]
+
+    for pr, pg, pb in palette:
+        dist = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2
+        if dist < min_dist:
+            min_dist = dist
+            nearest = (pr, pg, pb)
+
+    return nearest
+
+
+def pixelate_final_render(surface, pixel_size=8, num_colors=16):
+    """
+    Method B: Apply pixelate effect to final render
+    Process entire character together for unified look
+    """
+    width, height = surface.get_size()
+
+    # Ensure dimensions are divisible by pixel_size
+    new_width = (width // pixel_size) * pixel_size
+    new_height = (height // pixel_size) * pixel_size
+
+    # Downscale
+    small_width = new_width // pixel_size
+    small_height = new_height // pixel_size
+
+    # Crop to divisible size
+    cropped = surface.subsurface((0, 0, new_width, new_height)).copy()
+
+    # Scale down
+    small_surface = pygame.transform.scale(
+        cropped, (small_width, small_height))
+
+    # Get color palette
+    palette = get_dominant_colors(small_surface, num_colors)
+
+    # Apply palette
+    for x in range(small_width):
+        for y in range(small_height):
+            color = small_surface.get_at((x, y))
+            if color.a > 128:
+                nearest = find_nearest_color(color, palette)
+                small_surface.set_at((x, y), (*nearest, color.a))
+
+    # Scale back up
+    pixelated = pygame.transform.scale(small_surface, (new_width, new_height))
+
+    return pixelated
 
 
 class CharacterAnimator:
@@ -38,6 +112,18 @@ class CharacterAnimator:
         # Create animation controller
         self.anim_controller = AnimationController(self.skeleton)
         self.anim_controller.set_pose('ready', immediate=True)
+
+        # Pixelate effect settings (Method B)
+        self.pixelate_enabled = True
+        self.pixel_size = 8
+        self.num_colors = 16
+        self.render_surface = pygame.Surface(
+            (self.width, self.height), pygame.SRCALPHA)
+
+        # Hurt effect
+        self.hurt_effect = False
+        self.hurt_timer = 0
+        self.hurt_duration = 0.5  # 0.5 seconds
 
         # Game state
         self.running = True
@@ -255,6 +341,12 @@ class CharacterAnimator:
                 elif event.key == pygame.K_SPACE or event.key == pygame.K_j:
                     self.anim_controller.set_pose('jump')
 
+                # Hurt pose
+                elif event.key == pygame.K_5 or event.key == pygame.K_h:
+                    self.anim_controller.set_pose('hurt')
+                    self.hurt_effect = True
+                    self.hurt_timer = self.hurt_duration
+
                 # Load custom pose
                 elif event.key == pygame.K_F5:
                     self.load_custom_pose('custom')
@@ -265,6 +357,28 @@ class CharacterAnimator:
                 elif event.key == pygame.K_F6:
                     self.reload_all_poses()
 
+                # Toggle pixelate effect
+                elif event.key == pygame.K_F7:
+                    self.pixelate_enabled = not self.pixelate_enabled
+                    status = "ON" if self.pixelate_enabled else "OFF"
+                    print(f"✓ Pixelate effect: {status}")
+
+                # Adjust pixel size
+                elif event.key == pygame.K_LEFTBRACKET:  # [
+                    self.pixel_size = max(2, self.pixel_size - 2)
+                    print(f"✓ Pixel size: {self.pixel_size}")
+                elif event.key == pygame.K_RIGHTBRACKET:  # ]
+                    self.pixel_size = min(16, self.pixel_size + 2)
+                    print(f"✓ Pixel size: {self.pixel_size}")
+
+                # Adjust color count
+                elif event.key == pygame.K_MINUS:  # -
+                    self.num_colors = max(4, self.num_colors - 4)
+                    print(f"✓ Colors: {self.num_colors}")
+                elif event.key == pygame.K_EQUALS:  # +
+                    self.num_colors = min(32, self.num_colors + 4)
+                    print(f"✓ Colors: {self.num_colors}")
+
                 # Quit
                 elif event.key == pygame.K_ESCAPE:
                     self.running = False
@@ -273,6 +387,14 @@ class CharacterAnimator:
         """Update game logic"""
         self.anim_controller.update()
         self.skeleton.update()
+
+        # Update hurt effect timer
+        if self.hurt_timer > 0:
+            dt = self.clock.get_time() / 1000.0
+            self.hurt_timer -= dt
+            if self.hurt_timer <= 0:
+                self.hurt_effect = False
+                self.hurt_timer = 0
 
     def draw_ui(self):
         """Draw UI information"""
@@ -289,13 +411,17 @@ class CharacterAnimator:
             "2 - Ready pose",
             "3 or P - Punch (auto-return)",
             "4 or K - Kick (auto-return)",
+            "5 or H - Hurt (auto-return)",
             "Space or J - Jump (auto-return)",
             "F5 or L - Load custom pose",
             "F6 - Reload all poses",
+            "F7 - Toggle pixelate effect",
+            "[ ] - Pixel size  | - + - Colors",
             "ESC - Quit",
             "",
             f"Current pose: {self.anim_controller.current_pose.upper()}",
             f"Target pose: {self.anim_controller.target_pose.upper()}",
+            f"Pixelate: {'ON' if self.pixelate_enabled else 'OFF'} | Size: {self.pixel_size} | Colors: {self.num_colors}",
         ]
 
         # Add status info
@@ -342,8 +468,48 @@ class CharacterAnimator:
         self.screen.blit(ground_label_lower,
                          (self.width - 60, ground_y_lower + 5))
 
-        # Draw character
-        self.skeleton.draw(self.screen)
+        # Method B: Render character to temporary surface, then apply pixelate
+        if self.pixelate_enabled:
+            # Render to temporary surface
+            self.render_surface.fill((0, 0, 0, 0))  # Transparent background
+            self.skeleton.draw(self.render_surface)
+
+            # Apply hurt effect (red overlay 50%) before pixelate
+            if self.hurt_effect:
+                red_overlay = pygame.Surface(
+                    (self.width, self.height), pygame.SRCALPHA)
+                red_overlay.fill((255, 0, 0, 128))  # Red with 50% alpha
+                self.render_surface.blit(
+                    red_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+            # Apply pixelate effect
+            pixelated = pixelate_final_render(
+                self.render_surface,
+                self.pixel_size,
+                self.num_colors
+            )
+            self.screen.blit(pixelated, (0, 0))
+        else:
+            # Draw normally without pixelate
+            self.skeleton.draw(self.screen)
+
+            # Apply hurt effect (red overlay 50%) on character only
+            if self.hurt_effect:
+                # Create temporary surface for character
+                char_surface = pygame.Surface(
+                    (self.width, self.height), pygame.SRCALPHA)
+                char_surface.fill((0, 0, 0, 0))
+                self.skeleton.draw(char_surface)
+
+                # Apply red tint
+                red_overlay = pygame.Surface(
+                    (self.width, self.height), pygame.SRCALPHA)
+                red_overlay.fill((255, 0, 0, 128))
+                char_surface.blit(red_overlay, (0, 0),
+                                  special_flags=pygame.BLEND_RGBA_MULT)
+
+                # Draw tinted character
+                self.screen.blit(char_surface, (0, 0))
 
         # Draw UI
         self.draw_ui()

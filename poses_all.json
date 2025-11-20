@@ -1,0 +1,98 @@
+{
+  "tpose": {
+    "torso": {"rotation": 0, "position": [0, 0]},
+    "head": {"rotation": 0, "position": [0, -75]},
+    "left_upper_arm": {"rotation": -90, "position": [-85, -70]},
+    "left_forearm": {"rotation": 0, "position": [-144, 35]},
+    "right_upper_arm": {"rotation": 90, "position": [85, -70]},
+    "right_forearm": {"rotation": 0, "position": [144, 35]},
+    "left_thigh": {"rotation": 0, "position": [-44, 88]},
+    "left_shin": {"rotation": 0, "position": [-10, 90]},
+    "right_thigh": {"rotation": 0, "position": [44, 88]},
+    "right_shin": {"rotation": 0, "position": [10, 90]}
+  },
+  "ready": {
+    "torso": {"rotation": 0, "position": [0, 2]},
+    "head": {"rotation": 0, "position": [0, -70]},
+    "left_upper_arm": {"rotation": -50, "position": [-76, -69]},
+    "left_forearm": {"rotation": -45, "position": [-56, 35]},
+    "right_upper_arm": {"rotation": 50, "position": [76, -69]},
+    "right_forearm": {"rotation": 45, "position": [56, 35]},
+    "left_thigh": {"rotation": 0, "position": [-39, 74]},
+    "left_shin": {"rotation": 0, "position": [-7, 90]},
+    "right_thigh": {"rotation": 0, "position": [39, 74]},
+    "right_shin": {"rotation": 0, "position": [7, 90]}
+  },
+  "block": {
+    "torso": {"rotation": 0, "position": [0, 7]},
+    "head": {"rotation": 0, "position": [0, -70]},
+    "left_upper_arm": {"rotation": -45, "position": [-76, -68]},
+    "left_forearm": {"rotation": -155, "position": [-36, 31]},
+    "right_upper_arm": {"rotation": 45, "position": [76, -68]},
+    "right_forearm": {"rotation": 155, "position": [36, 31]},
+    "left_thigh": {"rotation": 5, "position": [-44, 88]},
+    "left_shin": {"rotation": -10, "position": [-11, 72]},
+    "right_thigh": {"rotation": -5, "position": [44, 88]},
+    "right_shin": {"rotation": 10, "position": [11, 72]}
+  },
+  "punch": {
+    "torso": {"rotation": -10, "position": [5, 0]},
+    "head": {"rotation": 5, "position": [5, -70]},
+    "left_upper_arm": {"rotation": -65, "position": [-70, -65]},
+    "left_forearm": {"rotation": -50, "position": [-50, 40]},
+    "right_upper_arm": {"rotation": 5, "position": [85, -55]},
+    "right_forearm": {"rotation": 5, "position": [155, 40]},
+    "left_thigh": {"rotation": 0, "position": [-39, 74]},
+    "left_shin": {"rotation": 0, "position": [-7, 90]},
+    "right_thigh": {"rotation": 0, "position": [39, 74]},
+    "right_shin": {"rotation": 0, "position": [7, 90]}
+  },
+  "kick": {
+    "torso": {"rotation": 5, "position": [-5, -5]},
+    "head": {"rotation": -5, "position": [-5, -70]},
+    "left_upper_arm": {"rotation": -75, "position": [-70, -65]},
+    "left_forearm": {"rotation": -70, "position": [-45, 45]},
+    "right_upper_arm": {"rotation": 70, "position": [80, -65]},
+    "right_forearm": {"rotation": 65, "position": [50, 45]},
+    "left_thigh": {"rotation": 15, "position": [-42, 71]},
+    "left_shin": {"rotation": -10, "position": [-9, 88]},
+    "right_thigh": {"rotation": -75, "position": [50, 55]},
+    "right_shin": {"rotation": 75, "position": [10, 100]}
+  },
+  "jump": {
+    "torso": {"rotation": 0, "position": [0, -30]},
+    "head": {"rotation": 0, "position": [0, -70]},
+    "left_upper_arm": {"rotation": -130, "position": [-70, -75]},
+    "left_forearm": {"rotation": -15, "position": [-30, 20]},
+    "right_upper_arm": {"rotation": 130, "position": [70, -75]},
+    "right_forearm": {"rotation": 15, "position": [30, 20]},
+    "left_thigh": {"rotation": 25, "position": [-42, 63]},
+    "left_shin": {"rotation": -45, "position": [-5, 85]},
+    "right_thigh": {"rotation": -25, "position": [44, 63]},
+    "right_shin": {"rotation": 45, "position": [5, 85]}
+  },
+  "hurt": {
+    "torso": {"rotation": -15, "position": [5, 10]},
+    "head": {"rotation": -10, "position": [-5, -68]},
+    "left_upper_arm": {"rotation": -60, "position": [-70, -65]},
+    "left_forearm": {"rotation": -90, "position": [-45, 40]},
+    "right_upper_arm": {"rotation": 30, "position": [80, -60]},
+    "right_forearm": {"rotation": 70, "position": [50, 40]},
+    "left_thigh": {"rotation": 10, "position": [-38, 76]},
+    "left_shin": {"rotation": -5, "position": [-8, 88]},
+    "right_thigh": {"rotation": -10, "position": [42, 76]},
+    "right_shin": {"rotation": 5, "position": [8, 88]}
+  },
+  "custom": {
+    "torso": {"rotation": 0, "position": [0, 2]},
+    "head": {"rotation": 0, "position": [0, -70]},
+    "left_upper_arm": {"rotation": -50, "position": [-76, -69]},
+    "left_forearm": {"rotation": -45, "position": [-56, 35]},
+    "right_upper_arm": {"rotation": 50, "position": [76, -69]},
+    "right_forearm": {"rotation": 45, "position": [56, 35]},
+    "left_thigh": {"rotation": 0, "position": [-39, 74]},
+    "left_shin": {"rotation": 0, "position": [-7, 90]},
+    "right_thigh": {"rotation": 0, "position": [39, 74]},
+    "right_shin": {"rotation": 0, "position": [7, 90]}
+  }
+}
