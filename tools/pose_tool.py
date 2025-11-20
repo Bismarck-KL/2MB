@@ -2,6 +2,10 @@
 Intuitive character pose adjustment tool
 Displays complete character, allowing direct visualization of adjustments
 """
+import glob
+from animation import Poses
+from body_parts import BodyParts
+from skeleton import Skeleton, BodyPart
 import pygame
 import sys
 import json
@@ -10,9 +14,6 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from skeleton import Skeleton, BodyPart
-from body_parts import BodyParts
-from animation import Poses
 
 pygame.init()
 
@@ -23,9 +24,9 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Character Pose Adjustment Tool")
 
 # Load and slice image
-import glob
 photo_files = glob.glob("assets/photo/*.*")
-image_files = [f for f in photo_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+image_files = [f for f in photo_files if f.lower().endswith(
+    ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
 if not image_files:
     print("Error: No image found in assets/photo/")
     sys.exit(1)
@@ -193,17 +194,17 @@ def save_and_update_animation(pose_name):
 
     # Save to poses_all.json (update existing file)
     poses_file = os.path.join(parent_dir, 'poses_all.json')
-    
+
     # Load existing poses
     if os.path.exists(poses_file):
         with open(poses_file, 'r', encoding='utf-8') as f:
             all_poses = json.load(f)
     else:
         all_poses = {}
-    
+
     # Update the specific pose
     all_poses[pose_name] = pose
-    
+
     # Save back to poses_all.json
     with open(poses_file, 'w', encoding='utf-8') as f:
         json.dump(all_poses, f, indent=4, ensure_ascii=False)
@@ -271,7 +272,7 @@ def load_pose(pose_name):
 
 def save_pose():
     """Save current pose (deprecated - use save_and_update_animation instead)
-    
+
     This function is kept for backward compatibility but does nothing now.
     Use P key (save_and_update_animation) to properly save poses.
     """

@@ -2,6 +2,7 @@
 交互式身体部位调整工具
 可以手动调整分割区域和连接位置
 """
+import glob
 import pygame
 import sys
 import json
@@ -16,9 +17,9 @@ pygame.init()
 temp_screen = pygame.display.set_mode((100, 100))
 
 # 加载原始图片
-import glob
 photo_files = glob.glob("assets/photo/*.*")
-image_files = [f for f in photo_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+image_files = [f for f in photo_files if f.lower().endswith(
+    ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
 if not image_files:
     print("Error: No image found in assets/photo/")
     sys.exit(1)
@@ -91,7 +92,8 @@ clock = pygame.time.Clock()
 def load_data():
     """从配置文件加载数据"""
     try:
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'body_parts_config.json')
+        config_path = os.path.join(os.path.dirname(
+            os.path.dirname(__file__)), 'body_parts_config.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
 

@@ -538,7 +538,7 @@ def main():
 
     # 1. Check assets/photo folder first (any image file)
     if os.path.exists("assets/photo"):
-        files = [f for f in os.listdir("assets/photo") 
+        files = [f for f in os.listdir("assets/photo")
                  if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
         if files:
             # Use the first image found
