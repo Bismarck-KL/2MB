@@ -22,6 +22,8 @@ class MenuScene:
         self.start_rect = pygame.Rect(center_x - btn_w - 20, center_y, btn_w, btn_h)
         self.quit_rect = pygame.Rect(center_x + 20, center_y, btn_w, btn_h)
 
+        self.dev_game_rect = pygame.Rect(center_x + 20, center_y + btn_h + 20, btn_w, btn_h)
+       
         # create Button components (images will be used if available)
         # get images defensively (loader may have set None for missing files)
         try:
@@ -49,6 +51,14 @@ class MenuScene:
             hover_color=QUIT_HOVER,
             image=quit_img,
         )
+        self.dev_game_button = Button(
+            self.dev_game_rect,
+            text="Dev Game",
+            font=self.font,
+            base_color=START_BASE,
+            hover_color=START_HOVER,
+            image=None,
+        )
 
         self.started = False
 
@@ -58,6 +68,9 @@ class MenuScene:
             self.app.change_scene("AvatarCreateScene")
         if self.quit_button.handle_event(event):
             self.app.running = False
+        if self.dev_game_button.handle_event(event):
+            # switch to Game scene when Dev Game is clicked
+            self.app.change_scene("GameScene")
 
     def update(self, dt):
         pass
@@ -84,6 +97,7 @@ class MenuScene:
         mouse_pos = pygame.mouse.get_pos()
         self.start_button.draw(self.screen, mouse_pos)
         self.quit_button.draw(self.screen, mouse_pos)
+        self.dev_game_button.draw(self.screen, mouse_pos)
 
         if self.started:
             status_surf = self.font.render("Started!", True, STATUS)
