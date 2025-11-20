@@ -1,214 +1,156 @@
 # 2D Character Animation System
 
-Pygame-based 2D skeletal animation system with character pose switching and smooth animation transitions.
+Pygame-based 2D skeletal animation system with real-time pixel art effects and dynamic pose switching.
 
 ## Features
 
-- ✅ Image Slicing: Automatic body part segmentation based on predefined regions
-- ✅ Skeletal System: Parent-child hierarchical body part management
-- ✅ Multiple Poses: Block, Ready, Punch, Kick, Jump, Custom
-- ✅ Smooth Transitions: Easing animations between poses
-- ✅ Keyboard Controls: Real-time action switching
-- ✅ Character Replacement: Support for different character images
-- ✅ **Pixel Art Converter: Transform any image into 8-bit pixel art style**
-- ✅ Pose Adjustment Tool: Visual pose editor with direct save to code
-- ✅ Hot-Reload: Press F6 to reload poses without restarting
+- ✅ **Skeletal Animation**: Hierarchical parent-child body part system with smooth transitions
+- ✅ **Real-time Pixel Art**: Post-process pixelate effect with adjustable parameters
+- ✅ **Multiple Poses**: T-pose, Ready, Block, Punch, Kick, Jump, Hurt (with damage flash)
+- ✅ **Action System**: Auto-return actions with configurable durations
+- ✅ **Hot-Reload**: Press F6 to reload poses without restarting (F5 for custom poses)
+- ✅ **Development Tools**: Pose editor, proportion adjuster, style configurator
 
-## 安装依赖
+## Quick Start
 
 ```bash
+# Install dependencies
 pip install pygame
-```
 
-## 运行程序
-
-```bash
+# Run main animation player
 python main.py
 ```
 
 ## Controls
 
+### Pose Switching
 - **1** or **B** - Block pose (auto-return)
 - **2** - Ready pose (battle stance)
 - **3** or **P** - Punch action (auto-return)
 - **4** or **K** - Kick action (auto-return)
 - **Space** or **J** - Jump action (auto-return)
+- **5** or **H** - Hurt action (damage flash, auto-return)
 - **F5** or **L** - Load custom pose
 - **F6** - Hot-reload all poses
+
+### Pixel Art Controls
+- **F7** - Toggle pixelate effect on/off
+- **[** / **]** - Decrease/Increase pixel size (2-16)
+- **-** / **+** - Decrease/Increase color palette (4-32)
+
+### General
 - **ESC** - Quit
 
-## 🎨 NEW: Pixel Art Converter
+## 🎨 Pixel Art System
 
-Transform any character image into retro 8-bit pixel art style!
+Real-time post-processing pixelate effect with:
+- **Adjustable Pixel Size**: Downscale factor from 2x to 16x
+- **Color Palette Reduction**: Limit colors from 4 to 32 for authentic retro look
+- **Dominant Color Extraction**: Automatic palette generation from rendered frame
+- **No Pre-processing Required**: Works on any character image dynamically
 
-### Quick Start
-```bash
-# Simple pixelation
-python pixelate_image.py
-
-# Advanced with custom palette
-python pixelate_advanced.py
-```
-
-### Features
-- **Automatic color palette extraction** - Smart color reduction
-- **Pixel size control** - From chunky 16x16 to fine 4x4
-- **Outline generation** - Add black borders for clarity
-- **Dithering support** - Smoother gradients
-- **Before/After preview** - See the transformation
-
-### Pixelation Styles
-
-#### Style 1: Classic 8-bit (Recommended)
-```bash
-python pixelate_advanced.py
-# Select option 1
-# Pixel size: 8x8, Colors: 16, Outline: Yes
-```
-Perfect for retro Mario/Zelda style!
-
-#### Style 2: Retro 16-bit
-```bash
-# Select option 2
-# Pixel size: 4x4, Colors: 32, Outline: Yes
-```
-More detailed, SNES-era graphics
-
-#### Style 3: Chunky Pixel
-```bash
-# Select option 3
-# Pixel size: 16x16, Colors: 12, Outline: Yes
-```
-Bold, high-contrast pixel art
-
-### Usage Example
-```bash
-# Convert your character
-python pixelate_advanced.py
-# Input: sample/tpose.png
-# Output: sample/tpose_8bit.png
-
-# The system will auto-detect and use pixelated version!
-python main.py
-```
-
-## File Structure
+## Project Structure
 
 ```
 motion test_3/
-├── main.py                 # Main game loop
-├── body_parts.py          # Body part slicing definitions
-├── skeleton.py            # Skeletal system and transforms
-├── animation.py           # Animation controller and pose data
-├── pose_tool.py           # Visual pose adjustment tool
-├── pixelate_image.py      # Simple pixelation tool
-├── pixelate_advanced.py   # Advanced pixel art converter ⭐
-├── update_animation.py    # Direct pose-to-code updater
-├── sample/
-│   ├── tpose.png         # Original T-pose image
-│   ├── tpose_8bit.png    # Pixelated version (auto-generated)
-│   ├── slice_sample.png  # Slicing reference
-│   ├── punch.png         # Punch reference
-│   └── kick.png          # Kick reference
-├── pose_*.json           # Saved pose configurations
-└── README.md             # Documentation
+├── main.py                    # Main animation player with integrated pixel art
+├── animation.py               # Animation controller and pose definitions
+├── skeleton.py                # Skeletal system with transforms
+├── body_parts.py              # Body part slicing and rendering
+├── body_parts_config.json     # Body part proportion settings
+├── poses_all.json             # Unified pose storage (all 8 poses)
+├── update_animation.py        # Helper for pose tool
+├── main_backup.py             # Backup before pixel art integration
+├── assets/
+│   └── photo/
+│       └── tpose.png          # Character T-pose image
+├── sample/                    # Reference images and test files
+├── tools/                     # Development and adjustment tools
+│   ├── README.md              # Tool documentation
+│   ├── pose_tool.py           # Interactive pose editor
+│   ├── adjust_tool.py         # Body proportion adjuster
+│   ├── style_config.py        # Pixel art style configurator
+│   ├── auto_watch.py          # File change watcher
+│   └── compare_images.py     # Visual comparison tool
+└── README.md                  # This file
 ```
+
+## Development Tools
+
+All development tools are located in the `tools/` directory. See `tools/README.md` for detailed documentation.
+
+### Pose Editor
+```bash
+python tools/pose_tool.py
+```
+Interactive visual editor for creating and modifying character poses. Changes are saved to `poses_all.json` and can be hot-reloaded with F6.
+
+### Proportion Adjuster
+```bash
+python tools/adjust_tool.py
+```
+Adjust body part lengths and proportions in real-time. Saves to `body_parts_config.json`.
 
 ## 如何替换角色
 
 ### 方法1：修改默认图片
 直接替换 `sample/tpose.png` 文件，保持相同的文件名。
 
-### 方法2：代码中指定
-修改 `main.py` 中的路径：
-```python
-game = CharacterAnimator("你的图片路径.png")
+## Technical Details
+
+### Skeletal Hierarchy
+```
+Torso (root)
+├── Head
+├── Left Upper Arm
+│   └── Left Forearm
+├── Right Upper Arm
+│   └── Right Forearm
+├── Left Thigh
+│   └── Left Calf
+└── Right Thigh
+    └── Right Calf
 ```
 
-### 方法3：运行时切换
-在代码中调用：
-```python
-game.reload_character("新图片路径.png")
-```
+### Coordinate System
+- Parent-child hierarchical transforms
+- Each part has local and world coordinates
+- Rotation based on customizable pivot points
 
-## 自定义分割区域
+### Animation System
+- Linear interpolation (LERP) for smooth transitions
+- Ease-out function for natural movement
+- Configurable transition speed
 
-如果你的角色图片尺寸不同，需要修改 `body_parts.py` 中的坐标：
+### Pixel Art Implementation
+- **Method B (Post-Processing)**: Entire rendered frame is pixelated
+- **Dominant Color Extraction**: k-means clustering on rendered pixels
+- **Nearest Color Mapping**: Color quantization to extracted palette
+- **Downscale → Quantize → Upscale**: Three-step process for authentic look
 
-```python
-class BodyParts:
-    def __init__(self):
-        # 修改这些坐标以匹配你的图片
-        self.head = (x, y, width, height)
-        self.torso = (x, y, width, height)
-        # ... 其他部位
-```
+## Troubleshooting
 
-## 自定义动作姿势
+### Character not displaying correctly
+- Check image path in `body_parts.py`
+- Verify slice coordinates match your image dimensions
+- Use `tools/adjust_tool.py` to adjust proportions
 
-在 `animation.py` 中添加新姿势：
+### Actions feel unnatural
+- Adjust pose rotations in `poses_all.json`
+- Use `tools/pose_tool.py` for visual editing
+- Modify `transition_speed` in `animation.py`
 
-```python
-@staticmethod
-def get_custom_pose():
-    return {
-        'torso': {'rotation': 0, 'position': [0, 0]},
-        'head': {'rotation': 0, 'position': [0, -100]},
-        # ... 其他部位的旋转和位置
-    }
-```
+### Pixel art looks wrong
+- Press F7 to toggle effect on/off
+- Adjust pixel size with [] keys (try 8 for classic look)
+- Adjust color count with -+ keys (try 16 for retro feel)
 
-然后在 `get_all_poses()` 中注册：
-```python
-return {
-    'tpose': Poses.get_tpose(),
-    'ready': Poses.get_ready(),
-    'punch': Poses.get_punch(),
-    'kick': Poses.get_kick(),
-    'custom': Poses.get_custom_pose()  # 新增
-}
-```
-
-## 技术细节
-
-### 骨骼层级结构
-```
-躯干 (根节点)
-├── 头部
-├── 左上臂
-│   └── 左前臂
-├── 右上臂
-│   └── 右前臂
-├── 左大腿
-│   └── 左小腿
-└── 右大腿
-    └── 右小腿
-```
-
-### 坐标系统
-- 使用父子层级变换
-- 每个部位有本地坐标和世界坐标
-- 旋转基于设定的旋转中心点（pivot）
-
-### 动画系统
-- 使用线性插值（LERP）实现平滑过渡
-- 应用缓动函数（ease-out）使动画更自然
-- 可调节过渡速度
-
-## 故障排除
-
-### 问题：角色显示不正确
-- 检查图片路径是否正确
-- 确认 `body_parts.py` 中的坐标匹配你的图片
-
-### 问题：动作不自然
-- 调整 `animation.py` 中的姿势数据
-- 修改 `transition_speed` 改变动画速度
-
-### 问题：pygame初始化失败
-- 确保已安装pygame: `pip install pygame`
-- 检查Python版本（建议3.7+）
-
-## 许可证
+## License
 
 MIT License
+
+## Credits
+
+- Animation System: Skeletal animation with Pygame
+- Pixel Art System: Post-process pixelate effect
+- GitHub: https://github.com/Bismarck-KL/2MB
