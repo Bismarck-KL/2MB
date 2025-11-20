@@ -1,7 +1,8 @@
 import pygame
 
-from utils.color import TITLE, QUIT_BASE, QUIT_HOVER
+from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER
 from utils.ui import Button
+
 
 # TO-DO(FAMA): implement actual avatar creation flow and UI
 class AvatarCreateScene:
@@ -18,8 +19,13 @@ class AvatarCreateScene:
 
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
-        self.back_button = Button(self.back_rect, text="Back", font=self.font,
-                                  base_color=QUIT_BASE, hover_color=QUIT_HOVER)
+        self.back_button = Button(
+            self.back_rect,
+            text="Back",
+            font=self.font,
+            base_color=QUIT_BASE,
+            hover_color=QUIT_HOVER,
+        )
 
     def handle_event(self, event):
         # keyboard: Esc returns to menu
@@ -34,8 +40,23 @@ class AvatarCreateScene:
         pass
 
     def render(self):
+
+        # draw background image or color
+        try:
+            bg_image = self.res_mgr.get_image("menu_background")
+            if bg_image:
+                # protect against invalid surfaces
+                scaled = pygame.transform.smoothscale(
+                    bg_image, (self.app.WIDTH, self.app.HEIGHT)
+                )
+                self.screen.blit(scaled, (0, 0))
+            else:
+                self.screen.fill(BG)
+        except Exception:
+            # fallback: plain background color
+            self.screen.fill(BG)
+
         # simple visual
-        self.screen.fill((18, 24, 36))
         txt = self.title_font.render("Avatar Create Scene", True, TITLE)
         rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
         self.screen.blit(txt, rect)
@@ -43,4 +64,3 @@ class AvatarCreateScene:
         # draw back button
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
-
