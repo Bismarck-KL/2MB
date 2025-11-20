@@ -84,6 +84,7 @@ class GameImageLoader:
                     self.images[key] = surf
             except Exception:
                 # on error skip but continue; caller can check missing keys
+                print(f"Error loading image '{key}' from path: {full}"  )
                 self.images[key] = None  # type: ignore
 
             if report:
