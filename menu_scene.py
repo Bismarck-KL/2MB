@@ -53,7 +53,7 @@ class MenuScene:
         )
         self.dev_game_button = Button(
             self.dev_game_rect,
-            text="Dev Game",
+            text="Game (Dev)",
             font=self.font,
             base_color=START_BASE,
             hover_color=START_HOVER,
