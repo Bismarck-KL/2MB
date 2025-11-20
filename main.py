@@ -2,6 +2,7 @@
 Main game file
 2D skeletal animation system using Pygame
 With real-time pixelate effect (Method B)
+支援多種解析度的靈活配置
 """
 
 import pygame
@@ -10,6 +11,7 @@ from body_parts import BodyParts
 from skeleton import Skeleton, BodyPart
 from animation import AnimationController
 from collections import Counter
+import config
 
 
 def get_dominant_colors(surface, num_colors=16):
@@ -87,27 +89,50 @@ def pixelate_final_render(surface, pixel_size=8, num_colors=16):
 class CharacterAnimator:
     """Character animator - main game class"""
 
-    def __init__(self, image_path="sample/tpose.png"):
+    def __init__(self, image_path=None, window_mode=None, fullscreen=None):
         """Initialize game
 
         Args:
-            image_path: Path to T-pose image
+            image_path: Path to T-pose image (None = use config default)
+            window_mode: Window mode ('auto', '2mb', '1080p', '720p', 'classic', 'custom' or None for config default)
+            fullscreen: Whether to use fullscreen mode (None = use config default)
         """
         pygame.init()
 
-        # Window settings
-        self.width = 1024
-        self.height = 768
-        self.screen = pygame.display.set_mode((self.width, self.height))
+        # 從config讀取設定
+        if image_path is None:
+            image_path = config.DEFAULT_CHARACTER_IMAGE
+
+        if fullscreen is None:
+            fullscreen = config.FULLSCREEN
+
+        # Window settings - 支援多種尺寸
+        self.width, self.height = config.get_window_size(window_mode)
+
+        # 創建視窗
+        if fullscreen:
+            self.screen = pygame.display.set_mode(
+                (self.width, self.height), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode((self.width, self.height))
+
         pygame.display.set_caption("2D Character Animation System")
+
+        print(f"Window size: {self.width}x{self.height}")
+        print(f"Mode: {window_mode or config.WINDOW_MODE}")
 
         # Clock
         self.clock = pygame.time.Clock()
-        self.fps = 60
+        self.fps = config.FPS
 
         # Load character
         self.image_path = image_path
         self.load_character(image_path)
+
+        # 根據視窗大小調整角色位置
+        char_x = int(self.width * config.CHARACTER_POS_X)
+        char_y = int(self.height * config.CHARACTER_POS_Y)
+        self.skeleton.set_position(char_x, char_y)
 
         # Create animation controller
         self.anim_controller = AnimationController(self.skeleton)
@@ -153,8 +178,9 @@ class CharacterAnimator:
         # Load original image
         original_image = pygame.image.load(image_path).convert_alpha()
 
-        # Get body parts definition
-        body_parts_def = BodyParts()
+        # Get body parts definition - 自動根據圖片路徑選擇配置
+        from body_parts_profiles import BodyPartsConfig
+        body_parts_def = BodyPartsConfig.from_image_path(image_path)
         parts_dict = body_parts_def.get_all_parts()
 
         # Slice image and create body parts
@@ -533,35 +559,56 @@ def main():
     """Main function"""
     import os
 
-    # Priority order: assets/pixelated > assets/photo > sample
+    # Priority: player1 > player2 > assets/photo/tpose.png > sample/tpose.png
     image_path = None
 
-    # 1. Check assets/photo folder first (any image file)
-    if os.path.exists("assets/photo"):
-        files = [f for f in os.listdir("assets/photo")
-                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
-        if files:
-            # Use the first image found
-            image_path = os.path.join("assets/photo", files[0])
-            print(f"✓ Using image: {image_path}")
-            if len(files) > 1:
-                print(f"  (Found {len(files)} images, using first one)")
+    # 1. Check for player1 tpose.png
+    if os.path.exists("assets/photo/player1/tpose.png"):
+        image_path = "assets/photo/player1/tpose.png"
+        print(f"✓ Using Player 1: {image_path}")
 
-    # 2. Check pixelated folder as fallback
-    if not image_path and os.path.exists("assets/pixelated"):
-        files = [f for f in os.listdir("assets/pixelated")
-                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
-        if files:
-            image_path = os.path.join("assets/pixelated", files[0])
-            print(f"✓ Using pixelated image: {image_path}")
+    # 2. Check for player2 tpose.png
+    elif os.path.exists("assets/photo/player2/tpose.png"):
+        image_path = "assets/photo/player2/tpose.png"
+        print(f"✓ Using Player 2: {image_path}")
 
-    # 3. Fallback to sample folder
-    if not image_path and os.path.exists("sample"):
+    # 3. Check for tpose.png in assets/photo
+    elif os.path.exists("assets/photo/tpose.png"):
+        image_path = "assets/photo/tpose.png"
+        print(f"✓ Using: {image_path}")
+
+    # 4. Check for tpose.png in sample folder
+    elif os.path.exists("sample/tpose.png"):
+        image_path = "sample/tpose.png"
+        print(f"✓ Using sample: {image_path}")
+
+    # 5. Check player1 folder for any image
+    elif os.path.exists("assets/photo/player1"):
+        files = [f for f in os.listdir("assets/photo/player1")
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg')) and
+                 os.path.isfile(os.path.join("assets/photo/player1", f))]
+        if files:
+            png_files = [f for f in files if f.lower().endswith('.png')]
+            if png_files:
+                image_path = os.path.join(
+                    "assets/photo/player1", sorted(png_files)[0])
+            else:
+                image_path = os.path.join(
+                    "assets/photo/player1", sorted(files)[0])
+            print(f"✓ Using Player 1: {image_path}")
+
+    # 6. Check sample folder for any image
+    elif os.path.exists("sample"):
         files = [f for f in os.listdir("sample")
-                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg')) and
+                 os.path.isfile(os.path.join("sample", f))]
         if files:
-            image_path = os.path.join("sample", files[0])
-            print(f"Using sample image: {image_path}")
+            png_files = [f for f in files if f.lower().endswith('.png')]
+            if png_files:
+                image_path = os.path.join("sample", sorted(png_files)[0])
+            else:
+                image_path = os.path.join("sample", sorted(files)[0])
+            print(f"Using sample: {image_path}")
 
     # 4. No image found
     if not image_path:
@@ -573,8 +620,8 @@ def main():
         print("   Supported formats: PNG, JPG, JPEG, BMP, GIF, WEBP")
         sys.exit(1)
 
-    # Create game instance
-    game = CharacterAnimator(image_path)
+    # Create game instance (使用config預設設定)
+    game = CharacterAnimator(image_path=image_path)
 
     # Run game
     game.run()
