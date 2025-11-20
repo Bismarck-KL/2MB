@@ -5,6 +5,11 @@ Displays complete character, allowing direct visualization of adjustments
 import pygame
 import sys
 import json
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from skeleton import Skeleton, BodyPart
 from body_parts import BodyParts
 from animation import Poses
@@ -18,7 +23,7 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Character Pose Adjustment Tool")
 
 # Load and slice image
-original_image = pygame.image.load("sample/tpose.png").convert_alpha()
+original_image = pygame.image.load("assets/photo/tpose.png").convert_alpha()
 body_parts_def = BodyParts()
 parts_dict = body_parts_def.get_all_parts()
 
@@ -174,9 +179,22 @@ def save_and_update_animation(pose_name):
     # Get current pose
     pose = get_current_pose()
 
-    # Save to pose_custom.json
-    with open('pose_custom.json', 'w', encoding='utf-8') as f:
-        json.dump(pose, f, indent=4, ensure_ascii=False)
+    # Save to poses_all.json (update existing file)
+    poses_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'poses_all.json')
+    
+    # Load existing poses
+    if os.path.exists(poses_file):
+        with open(poses_file, 'r', encoding='utf-8') as f:
+            all_poses = json.load(f)
+    else:
+        all_poses = {}
+    
+    # Update the specific pose
+    all_poses[pose_name] = pose
+    
+    # Save back to poses_all.json
+    with open(poses_file, 'w', encoding='utf-8') as f:
+        json.dump(all_poses, f, indent=4, ensure_ascii=False)
 
     # Directly update animation.py
     success = update_animation.update_pose_in_animation(pose_name, pose)

@@ -5,6 +5,10 @@
 import pygame
 import sys
 import json
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 pygame.init()
 
@@ -12,7 +16,7 @@ pygame.init()
 temp_screen = pygame.display.set_mode((100, 100))
 
 # 加载原始图片
-original_image = pygame.image.load("sample/tpose.png").convert_alpha()
+original_image = pygame.image.load("assets/photo/tpose.png").convert_alpha()
 img_width = original_image.get_width()
 img_height = original_image.get_height()
 
@@ -79,7 +83,8 @@ clock = pygame.time.Clock()
 def load_data():
     """从配置文件加载数据"""
     try:
-        with open('body_parts_config.json', 'r', encoding='utf-8') as f:
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'body_parts_config.json')
+        with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
 
         # 更新body_parts
@@ -111,7 +116,9 @@ def save_data():
             'height': data['rect'][3]
         }
 
-    with open('body_parts_config.json', 'w', encoding='utf-8') as f:
+    parent_dir = os.path.dirname(os.path.dirname(__file__))
+    config_path = os.path.join(parent_dir, 'body_parts_config.json')
+    with open(config_path, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=4, ensure_ascii=False)
 
     # 生成Python代码 - 包含注释
@@ -134,13 +141,11 @@ def save_data():
     code += "        }\n"
 
     # 同时更新body_parts.py（主文件）
-    with open('body_parts.py', 'w', encoding='utf-8') as f:
+    body_parts_path = os.path.join(parent_dir, 'body_parts.py')
+    with open(body_parts_path, 'w', encoding='utf-8') as f:
         f.write(code)
 
-    with open('body_parts_generated.py', 'w', encoding='utf-8') as f:
-        f.write(code)
-
-    print("✓ 已保存配置到 body_parts.py, body_parts_generated.py 和 body_parts_config.json")
+    print("✓ 已保存配置到 body_parts.py 和 body_parts_config.json")
     return True
 
 
