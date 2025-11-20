@@ -29,7 +29,8 @@ class Application:
 		images = {
 			"background": os.path.join("assets", "images", "background.jpg"),
 			"game_background": os.path.join("assets", "images", "game_background.jpg"),
-			"btn_start": os.path.join("assets", "images", "button_start.png"),
+			"menu_background": os.path.join("assets", "images", "menu_background.jpg"),
+            "btn_start": os.path.join("assets", "images", "button_start.png"),
 			"btn_quit": os.path.join("assets", "images", "button_quit.png"),
 		}
 		self.res_mgr = ResourceManager(images=images, image_base_dir=None, audio_path=None)
