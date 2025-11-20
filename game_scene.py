@@ -76,21 +76,22 @@ class GameScene:
 
         # draw HUD health bars for both players (top-left and top-right)
         try:
-            margin = 16
+            w_margin = 16
+            h_margin = 100
             bar_w = 360
             bar_h = 20
             # player 1 left
-            p1_rect = pygame.Rect(margin, margin, bar_w, bar_h)
+            p1_rect = pygame.Rect(w_margin, h_margin, bar_w, bar_h)
             draw_health_bar(self.screen, p1_rect, self.player_1.health_points, self.player_1.max_health_points)
             # label
             lbl1 = self.font.render("P1", True, TITLE)
-            self.screen.blit(lbl1, (p1_rect.right + 8, margin - 2))
+            self.screen.blit(lbl1, (p1_rect.right + 8, h_margin - 2))
 
             # player 2 right
-            p2_rect = pygame.Rect(self.app.WIDTH - margin - bar_w, margin, bar_w, bar_h)
+            p2_rect = pygame.Rect(self.app.WIDTH - w_margin - bar_w, h_margin, bar_w, bar_h)
             draw_health_bar(self.screen, p2_rect, self.player_2.health_points, self.player_2.max_health_points)
             lbl2 = self.font.render("P2", True, TITLE)
             lbl2_rect = lbl2.get_rect()
-            self.screen.blit(lbl2, (p2_rect.left - lbl2_rect.width - 8, margin - 2))
+            self.screen.blit(lbl2, (p2_rect.left - lbl2_rect.width - 8, h_margin - 2))
         except Exception:
             pass
