@@ -169,18 +169,22 @@ def save_and_update_animation(pose_name):
     """Save pose and directly update animation.py
 
     Args:
-        pose_name: 'ready', 'punch', or 'kick'
+        pose_name: 'ready', 'punch', 'kick', 'jump', 'block', 'hurt'
 
     Returns:
         True if successful
     """
+    import sys
+    parent_dir = os.path.dirname(os.path.dirname(__file__))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
     import update_animation
 
     # Get current pose
     pose = get_current_pose()
 
     # Save to poses_all.json (update existing file)
-    poses_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'poses_all.json')
+    poses_file = os.path.join(parent_dir, 'poses_all.json')
     
     # Load existing poses
     if os.path.exists(poses_file):
@@ -196,7 +200,8 @@ def save_and_update_animation(pose_name):
     with open(poses_file, 'w', encoding='utf-8') as f:
         json.dump(all_poses, f, indent=4, ensure_ascii=False)
 
-    # Directly update animation.py
+    # Directly update animation.py (so changes persist in code)
+    animation_file = os.path.join(parent_dir, 'animation.py')
     success = update_animation.update_pose_in_animation(pose_name, pose)
 
     if success:
@@ -374,7 +379,7 @@ while running:
             elif event.key == pygame.K_p:
                 # Determine which function to update based on current pose
                 pose_map = {'ready': 'ready', 'punch': 'punch',
-                            'kick': 'kick', 'jump': 'jump', 'block': 'block'}
+                            'kick': 'kick', 'jump': 'jump', 'block': 'block', 'hurt': 'hurt'}
                 if current_pose_name in pose_map:
                     if save_and_update_animation(pose_map[current_pose_name]):
                         save_message = f"✓ Updated {current_pose_name} to animation.py! Press F6 to reload"
@@ -427,6 +432,11 @@ while running:
                 current_pose_name = "jump"
                 skeleton.apply_pose(Poses.get_jump())
                 save_message = "✓ Switched to: Jump"
+                save_message_timer = 120
+            elif event.key == pygame.K_F7:
+                current_pose_name = "hurt"
+                skeleton.apply_pose(Poses.get_hurt())
+                save_message = "✓ Switched to: Hurt"
                 save_message_timer = 120
 
     # Update
@@ -526,7 +536,7 @@ while running:
         "Q/E rotate ±1° | Z/C fast ±5° | R reset",
         "[Pose Management]",
         "F1-Block | F2-Ready | F3-Punch",
-        "F4-Kick | F5-Jump",
+        "F4-Kick | F5-Jump | F7-Hurt",
         "P-Save & update to animation.py",
         "M-Mirror L→R | ESC-Quit",
         "After save, press F6 in main.py to reload"
