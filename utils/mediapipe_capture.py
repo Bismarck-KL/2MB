@@ -61,6 +61,53 @@ class _MediapipeCapture:
             except Exception:
                 pass
 
+    def initialize(self, report, stop_event=None):
+        """Synchronous initialization helper suitable as a loader callable.
+
+        The function will open the camera, perform a few warm-up frames with
+        MediaPipe to ensure models are loaded and camera is responsive, then
+        release the camera. It must accept a `report(progress_float)`
+        callable and an optional `stop_event` threading.Event.
+        """
+        try:
+            report(5.0)
+        except Exception:
+            pass
+
+        # stop early if requested
+        if stop_event is not None and stop_event.is_set():
+            return
+
+        cap = cv2.VideoCapture(self.camera_index)
+        if not cap.isOpened():
+            raise RuntimeError("MediapipeCapture: unable to open camera during initialization")
+
+        try:
+            mp_pose = mp.solutions.pose
+            with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+                # warm up a few frames
+                frames = 0
+                while frames < 6:
+                    if stop_event is not None and stop_event.is_set():
+                        break
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    _ = pose.process(img_rgb)
+                    frames += 1
+                    try:
+                        report(5.0 + (frames / 6.0) * 90.0)
+                    except Exception:
+                        pass
+        finally:
+            cap.release()
+
+        try:
+            report(100.0)
+        except Exception:
+            pass
+
 
 # module-level singleton for easy use
 _instance = _MediapipeCapture()
@@ -74,3 +121,12 @@ def start_mediapipe_capture():
 def stop_mediapipe_capture():
     """Stop the running mediapipe capture if active."""
     _instance.stop()
+
+
+def initialize_mediapipe(report, stop_event=None):
+    """Module-level loader wrapper that matches the loader signature used
+    by utils.loading.run_loading_with_callback.
+
+    It delegates to the singleton instance's `initialize` method.
+    """
+    return _instance.initialize(report, stop_event)
