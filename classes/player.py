@@ -45,7 +45,8 @@ class Player:
 
         # gamedata
         self.player_id = player_id
-        self.helth = 100
+        self.health_points = 100
+        self.max_health_points = 100
 
 
         # collision / draw rect
