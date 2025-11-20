@@ -6,7 +6,12 @@ from classes.player import Player
 
 # mediapipe capture helpers
 try:
-    from utils.mediapipe_capture import start_mediapipe_capture, stop_mediapipe_capture
+    from utils.mediapipe_capture import (
+        start_mediapipe_capture,
+        stop_mediapipe_capture,
+        initialize_mediapipe,
+    )
+    from utils.loading import run_loading_with_callback
 except Exception:
     # allow project to run even if opencv/mediapipe not available at import time
     def start_mediapipe_capture():
@@ -14,6 +19,34 @@ except Exception:
 
     def stop_mediapipe_capture():
         pass
+
+    def initialize_mediapipe(report, stop_event=None):
+        # fake progress for the loading UI when mediapipe isn't installed
+        import time
+
+        for p in range(0, 101, 10):
+            if stop_event is not None and stop_event.is_set():
+                break
+            try:
+                report(float(p))
+            except Exception:
+                pass
+            time.sleep(0.05)
+
+    def run_loading_with_callback(surface, loader, on_complete=None, **kwargs):
+        # Minimal fallback: call loader synchronously and then on_complete
+        try:
+            try:
+                loader(lambda p: None, None)
+            except TypeError:
+                loader(lambda p: None)
+        except Exception:
+            pass
+        if on_complete:
+            try:
+                on_complete()
+            except Exception:
+                pass
 
 
 class GameScene:
@@ -45,9 +78,16 @@ class GameScene:
     def on_enter(self):
         """Called when the scene becomes active. Start mediapipe capture in a new window."""
         try:
-            start_mediapipe_capture()
+            # show the project's loading UI while we initialize mediapipe
+            run_loading_with_callback(
+                surface=self.screen,
+                loader=initialize_mediapipe,
+                on_complete=start_mediapipe_capture,
+                title="Initializing Camera",
+                subtitle="Preparing MediaPipe...",
+            )
         except Exception as e:
-            print("GameScene: failed to start mediapipe capture:", e)
+            print("GameScene: failed to initialize mediapipe capture:", e)
 
     def on_exit(self):
         """Called when leaving the scene. Stop the mediapipe capture."""
