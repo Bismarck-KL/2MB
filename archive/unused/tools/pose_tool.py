@@ -537,7 +537,7 @@ while running:
 
     for text in texts:
         surface = font.render(text, True, (255, 255, 100))
-        screen.blit(surface, (panel_x + 15, y_info))
+        screen.blit(surface, (panel_x, y_info))
         y_info += 28
 
     y_offset += 115    # Control instructions
@@ -548,6 +548,8 @@ while running:
         "Arrow keys fine ±1px | WASD fast ±5px",
         "[Adjust Rotation]",
         "Q/E rotate ±1° | Z/C fast ±5° | R reset",
+        "[Fast adjust]",
+        "W/S/A/D - fast movement",
         "[Pose Management]",
         "F1-Block | F2-Ready | F3-Punch",
         "F4-Kick | F5-Jump | F7-Hurt",

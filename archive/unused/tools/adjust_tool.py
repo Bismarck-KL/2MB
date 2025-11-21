@@ -440,6 +440,7 @@ def main():
         
         print(f"✓ 自動選擇: {image_path} ({profile_name})")
         print("="*50 + "\n")
+        
     else:
         image_path = sys.argv[1]
         profile_name = sys.argv[2] if len(sys.argv) > 2 else 'default'
