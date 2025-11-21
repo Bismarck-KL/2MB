@@ -185,10 +185,15 @@ class CharacterAnimator:
 
         # Slice image and create body parts
         part_images = {}
+        scale_factor = 2.0  # 2x original size
         for part_name, (x, y, w, h) in parts_dict.items():
             # Create subsurface
             part_surface = pygame.Surface((w, h), pygame.SRCALPHA)
             part_surface.blit(original_image, (0, 0), (x, y, w, h))
+            # Scale up by 1/3
+            new_w = int(w * scale_factor)
+            new_h = int(h * scale_factor)
+            part_surface = pygame.transform.scale(part_surface, (new_w, new_h))
             part_images[part_name] = part_surface
 
         # Create skeletal system
