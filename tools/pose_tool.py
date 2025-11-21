@@ -3,16 +3,21 @@ Intuitive character pose adjustment tool
 Displays complete character, allowing direct visualization of adjustments
 """
 import glob
-from animation import Poses
-from body_parts import BodyParts
-from skeleton import Skeleton, BodyPart
 import pygame
 import sys
 import json
 import os
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path for imports (MUST be before other imports)
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
+
+# Change working directory to parent (so relative paths work)
+os.chdir(parent_dir)
+
+from animation import Poses
+from body_parts import BodyParts
+from skeleton import Skeleton, BodyPart
 
 
 pygame.init()
@@ -23,14 +28,19 @@ height = 900
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Character Pose Adjustment Tool")
 
-# Load and slice image
-photo_files = glob.glob("assets/photo/*.*")
+# Load and slice image - search in subdirectories
+photo_files = glob.glob("assets/photo/**/*.*", recursive=True)
 image_files = [f for f in photo_files if f.lower().endswith(
     ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
+
 if not image_files:
     print("Error: No image found in assets/photo/")
+    print("Please place your character image in assets/photo/player1/ or assets/photo/player2/")
     sys.exit(1)
-image_path = image_files[0]
+
+# Prefer tpose.png files
+tpose_files = [f for f in image_files if 'tpose' in f.lower()]
+image_path = tpose_files[0] if tpose_files else image_files[0]
 print(f"Loading image: {image_path}")
 original_image = pygame.image.load(image_path).convert_alpha()
 body_parts_def = BodyParts()
@@ -175,50 +185,43 @@ def get_current_pose():
 
 
 def save_and_update_animation(pose_name):
-    """Save pose and directly update animation.py
+    """Save pose to poses_all.json
 
     Args:
-        pose_name: 'ready', 'punch', 'kick', 'jump', 'block', 'hurt'
+        pose_name: 'ready', 'punch', 'kick', 'jump', 'block', 'hurt', 'tpose', 'custom'
 
     Returns:
         True if successful
     """
-    import sys
-    parent_dir = os.path.dirname(os.path.dirname(__file__))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    import update_animation
+    try:
+        # Get current pose
+        pose = get_current_pose()
 
-    # Get current pose
-    pose = get_current_pose()
+        # Get parent directory
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        poses_file = os.path.join(parent_dir, 'poses_all.json')
 
-    # Save to poses_all.json (update existing file)
-    poses_file = os.path.join(parent_dir, 'poses_all.json')
+        # Load existing poses
+        if os.path.exists(poses_file):
+            with open(poses_file, 'r', encoding='utf-8') as f:
+                all_poses = json.load(f)
+        else:
+            all_poses = {}
 
-    # Load existing poses
-    if os.path.exists(poses_file):
-        with open(poses_file, 'r', encoding='utf-8') as f:
-            all_poses = json.load(f)
-    else:
-        all_poses = {}
+        # Update the specific pose
+        all_poses[pose_name] = pose
 
-    # Update the specific pose
-    all_poses[pose_name] = pose
+        # Save back to poses_all.json
+        with open(poses_file, 'w', encoding='utf-8') as f:
+            json.dump(all_poses, f, indent=4, ensure_ascii=False)
 
-    # Save back to poses_all.json
-    with open(poses_file, 'w', encoding='utf-8') as f:
-        json.dump(all_poses, f, indent=4, ensure_ascii=False)
-
-    # Directly update animation.py (so changes persist in code)
-    animation_file = os.path.join(parent_dir, 'animation.py')
-    success = update_animation.update_pose_in_animation(pose_name, pose)
-
-    if success:
-        print(f"\n✓ Saved and updated {pose_name} pose")
-        print("Tip: Press F6 in main.py to reload poses and see the effect")
+        print(f"\n✓ Saved {pose_name} pose to poses_all.json")
+        print(f"   File: {poses_file}")
+        print("   Press F6 in game to reload poses")
         return True
-    else:
-        print(f"\n✗ Save failed")
+        
+    except Exception as e:
+        print(f"\n✗ Save failed: {e}")
         return False
 
 
@@ -255,19 +258,50 @@ def mirror_left_to_right():
 
 
 def load_pose(pose_name):
-    """Load saved pose"""
+    """Load pose from poses_all.json"""
     import os
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    poses_file = os.path.join(parent_dir, 'poses_all.json')
+    
+    # Try to load from poses_all.json first
+    if os.path.exists(poses_file):
+        try:
+            with open(poses_file, 'r', encoding='utf-8') as f:
+                all_poses = json.load(f)
+                if pose_name in all_poses:
+                    skeleton.apply_pose(all_poses[pose_name])
+                    print(f"[OK] Loaded pose from poses_all.json: {pose_name}")
+                    return True
+                else:
+                    print(f"[WARN] Pose '{pose_name}' not found in poses_all.json")
+        except Exception as e:
+            print(f"[ERROR] Failed to load poses_all.json: {e}")
+    
+    # Fallback: try old format pose_{name}.json
     json_file = f'pose_{pose_name}.json'
-
     if os.path.exists(json_file):
         with open(json_file, 'r', encoding='utf-8') as f:
             pose = json.load(f)
             skeleton.apply_pose(pose)
-            print(f"✓ Loaded pose: {pose_name}")
+            print(f"[OK] Loaded pose from {json_file}")
             return True
-    else:
-        print(f"✗ File not found: {json_file}")
-        return False
+    
+    # Last resort: use hardcoded poses
+    print(f"[WARN] Loading hardcoded pose for {pose_name}")
+    hardcoded_poses = {
+        'block': Poses.get_block(),
+        'ready': Poses.get_ready(),
+        'punch': Poses.get_punch(),
+        'kick': Poses.get_kick(),
+        'jump': Poses.get_jump(),
+        'hurt': Poses.get_hurt()
+    }
+    if pose_name in hardcoded_poses:
+        skeleton.apply_pose(hardcoded_poses[pose_name])
+        return True
+    
+    print(f"[ERROR] Could not load pose: {pose_name}")
+    return False
 
 
 def save_pose():
@@ -363,21 +397,13 @@ while running:
             elif event.key == pygame.K_r:
                 skeleton.parts[selected_part].local_rotation = 0
 
-            # P key: save and directly update animation.py (ENTER key disabled)
+            # P key: save pose to poses_all.json
             elif event.key == pygame.K_p:
-                # Determine which function to update based on current pose
-                pose_map = {'ready': 'ready', 'punch': 'punch',
-                            'kick': 'kick', 'jump': 'jump', 'block': 'block', 'hurt': 'hurt'}
-                if current_pose_name in pose_map:
-                    if save_and_update_animation(pose_map[current_pose_name]):
-                        save_message = f"✓ Updated {current_pose_name} to animation.py! Press F6 to reload"
-                        save_message_timer = 240
+                if save_and_update_animation(current_pose_name):
+                    save_message = f"✓ Saved {current_pose_name} to poses_all.json! Press F6 in game to reload"
+                    save_message_timer = 240
                 else:
-                    # If custom or other, only save to JSON
-                    pose = get_current_pose()
-                    with open('pose_custom.json', 'w', encoding='utf-8') as f:
-                        json.dump(pose, f, indent=4, ensure_ascii=False)
-                    save_message = f"✓ Saved {current_pose_name} to pose_custom.json"
+                    save_message = f"✗ Save failed for {current_pose_name}"
                     save_message_timer = 240
 
             # Mirror function
@@ -395,37 +421,37 @@ while running:
                     save_message = f"✗ Load failed: {current_pose_name}"
                     save_message_timer = 120
 
-            # Switch to preset pose
+            # Switch to preset pose (load from poses_all.json)
             elif event.key == pygame.K_F1:
                 current_pose_name = "block"
-                skeleton.apply_pose(Poses.get_block())
-                save_message = "✓ Switched to: Block"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Block"
+                    save_message_timer = 120
             elif event.key == pygame.K_F2:
                 current_pose_name = "ready"
-                skeleton.apply_pose(Poses.get_ready())
-                save_message = "✓ Switched to: Ready"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Ready"
+                    save_message_timer = 120
             elif event.key == pygame.K_F3:
                 current_pose_name = "punch"
-                skeleton.apply_pose(Poses.get_punch())
-                save_message = "✓ Switched to: Punch"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Punch"
+                    save_message_timer = 120
             elif event.key == pygame.K_F4:
                 current_pose_name = "kick"
-                skeleton.apply_pose(Poses.get_kick())
-                save_message = "✓ Switched to: Kick"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Kick"
+                    save_message_timer = 120
             elif event.key == pygame.K_F5:
                 current_pose_name = "jump"
-                skeleton.apply_pose(Poses.get_jump())
-                save_message = "✓ Switched to: Jump"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Jump"
+                    save_message_timer = 120
             elif event.key == pygame.K_F7:
                 current_pose_name = "hurt"
-                skeleton.apply_pose(Poses.get_hurt())
-                save_message = "✓ Switched to: Hurt"
-                save_message_timer = 120
+                if load_pose(current_pose_name):
+                    save_message = "[OK] Switched to: Hurt"
+                    save_message_timer = 120
 
     # Update
     skeleton.update()

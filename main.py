@@ -301,7 +301,7 @@ class CharacterAnimator:
         # Recreate animation controller
         from animation import AnimationController
         self.anim_controller = AnimationController(self.skeleton)
-        print("✓ Reloaded all poses!")
+        print("[OK] Reloaded all poses!")
 
     def load_custom_pose(self, pose_name='custom'):
         """Load custom pose
@@ -315,10 +315,10 @@ class CharacterAnimator:
         # Switch to custom pose
         if pose_name in self.anim_controller.poses:
             self.anim_controller.set_pose(pose_name, immediate=False)
-            print(f"✓ Loaded pose: {pose_name}")
+            print(f"[OK] Loaded pose: {pose_name}")
             return True
         else:
-            print(f"✗ Pose not found: {pose_name}")
+            print(f"[ERROR] Pose not found: {pose_name}")
             return False
 
     def reload_character(self, new_image_path):
@@ -387,23 +387,23 @@ class CharacterAnimator:
                 elif event.key == pygame.K_F7:
                     self.pixelate_enabled = not self.pixelate_enabled
                     status = "ON" if self.pixelate_enabled else "OFF"
-                    print(f"✓ Pixelate effect: {status}")
+                    print(f"[OK] Pixelate effect: {status}")
 
                 # Adjust pixel size
                 elif event.key == pygame.K_LEFTBRACKET:  # [
                     self.pixel_size = max(2, self.pixel_size - 2)
-                    print(f"✓ Pixel size: {self.pixel_size}")
+                    print(f"[OK] Pixel size: {self.pixel_size}")
                 elif event.key == pygame.K_RIGHTBRACKET:  # ]
                     self.pixel_size = min(16, self.pixel_size + 2)
-                    print(f"✓ Pixel size: {self.pixel_size}")
+                    print(f"[OK] Pixel size: {self.pixel_size}")
 
                 # Adjust color count
                 elif event.key == pygame.K_MINUS:  # -
                     self.num_colors = max(4, self.num_colors - 4)
-                    print(f"✓ Colors: {self.num_colors}")
+                    print(f"[OK] Colors: {self.num_colors}")
                 elif event.key == pygame.K_EQUALS:  # +
                     self.num_colors = min(32, self.num_colors + 4)
-                    print(f"✓ Colors: {self.num_colors}")
+                    print(f"[OK] Colors: {self.num_colors}")
 
                 # Quit
                 elif event.key == pygame.K_ESCAPE:
@@ -565,22 +565,22 @@ def main():
     # 1. Check for player1 tpose.png
     if os.path.exists("assets/photo/player1/tpose.png"):
         image_path = "assets/photo/player1/tpose.png"
-        print(f"✓ Using Player 1: {image_path}")
+        print(f"[OK] Using Player 1: {image_path}")
 
     # 2. Check for player2 tpose.png
     elif os.path.exists("assets/photo/player2/tpose.png"):
         image_path = "assets/photo/player2/tpose.png"
-        print(f"✓ Using Player 2: {image_path}")
+        print(f"[OK] Using Player 2: {image_path}")
 
     # 3. Check for tpose.png in assets/photo
     elif os.path.exists("assets/photo/tpose.png"):
         image_path = "assets/photo/tpose.png"
-        print(f"✓ Using: {image_path}")
+        print(f"[OK] Using: {image_path}")
 
     # 4. Check for tpose.png in sample folder
     elif os.path.exists("sample/tpose.png"):
         image_path = "sample/tpose.png"
-        print(f"✓ Using sample: {image_path}")
+        print(f"[OK] Using sample: {image_path}")
 
     # 5. Check player1 folder for any image
     elif os.path.exists("assets/photo/player1"):
@@ -595,7 +595,7 @@ def main():
             else:
                 image_path = os.path.join(
                     "assets/photo/player1", sorted(files)[0])
-            print(f"✓ Using Player 1: {image_path}")
+            print(f"[OK] Using Player 1: {image_path}")
 
     # 6. Check sample folder for any image
     elif os.path.exists("sample"):
@@ -612,7 +612,7 @@ def main():
 
     # 4. No image found
     if not image_path:
-        print("❌ Error: No image found!")
+        print("[ERROR] No image found!")
         print("   Please place your character image in:")
         print("   - assets/photo/ (recommended)")
         print("   - assets/pixelated/ (for pre-pixelated images)")

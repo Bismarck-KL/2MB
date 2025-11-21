@@ -183,7 +183,23 @@ class Poses:
 
     @staticmethod
     def get_all_poses():
-        """返回所有姿势的字典，包括自定义姿势"""
+        """返回所有姿勢的字典，優先從 poses_all.json 載入"""
+        import json
+        import os
+        
+        # 嘗試從 poses_all.json 載入
+        json_path = 'poses_all.json'
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    poses = json.load(f)
+                print(f"✓ Loaded {len(poses)} poses from poses_all.json")
+                return poses
+            except Exception as e:
+                print(f"⚠ Failed to load poses_all.json: {e}")
+                print("  Using hardcoded poses as fallback")
+        
+        # Fallback: 使用硬編碼的姿勢
         poses = {
             'block': Poses.get_block(),
             'ready': Poses.get_ready(),
@@ -193,11 +209,11 @@ class Poses:
             'hurt': Poses.get_hurt()
         }
 
-        # Try to load custom pose (as independent 5th pose)
+        # Try to load custom pose (as independent pose)
         custom_pose = Poses.load_custom_pose('custom')
         if custom_pose:
             poses['custom'] = custom_pose
-            print("✓ Loaded custom pose")
+            print("✓ Loaded custom pose from pose_custom.json")
 
         return poses
 
