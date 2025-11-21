@@ -347,15 +347,7 @@ class CharacterAnimator:
                 self.running = False
 
             elif event.type == pygame.KEYDOWN:
-                # Action keys (with cooldown)
-                if event.key in [pygame.K_1, pygame.K_b, pygame.K_3, pygame.K_p,
-                                 pygame.K_4, pygame.K_k, pygame.K_SPACE, pygame.K_j]:
-                    # Check cooldown
-                    if current_time - self.last_action_time < self.action_cooldown:
-                        continue  # Skip this input
-                    self.last_action_time = current_time
-
-                # Pose switching
+                # Action keys
                 if event.key == pygame.K_1 or event.key == pygame.K_b:
                     self.anim_controller.set_pose('block')
                 elif event.key == pygame.K_2:
@@ -500,41 +492,37 @@ class CharacterAnimator:
             self.render_surface.fill((0, 0, 0, 0))  # Transparent background
             self.skeleton.draw(self.render_surface)
 
-            # Apply hurt effect (red overlay 50%) before pixelate
-            if self.hurt_effect:
-                red_overlay = pygame.Surface(
-                    (self.width, self.height), pygame.SRCALPHA)
-                red_overlay.fill((255, 0, 0, 128))  # Red with 50% alpha
-                self.render_surface.blit(
-                    red_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-            # Apply pixelate effect
+            # Apply pixelate effect FIRST
             pixelated = pixelate_final_render(
                 self.render_surface,
                 self.pixel_size,
                 self.num_colors
             )
-            self.screen.blit(pixelated, (0, 0))
+            
+            # Apply hurt effect (red tint) on pixelated character only
+            if self.hurt_effect:
+                # Create a red-tinted version of the pixelated character
+                red_tinted = pixelated.copy()
+                red_overlay = pygame.Surface((pixelated.get_width(), pixelated.get_height()), pygame.SRCALPHA)
+                red_overlay.fill((255, 0, 0, 128))
+                red_tinted.blit(red_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                self.screen.blit(red_tinted, (0, 0))
+            else:
+                self.screen.blit(pixelated, (0, 0))
         else:
             # Draw normally without pixelate
             self.skeleton.draw(self.screen)
 
-            # Apply hurt effect (red overlay 50%) on character only
+            # Apply hurt effect for non-pixelated mode (on character only)
             if self.hurt_effect:
-                # Create temporary surface for character
-                char_surface = pygame.Surface(
-                    (self.width, self.height), pygame.SRCALPHA)
+                # Render character to temp surface
+                char_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
                 char_surface.fill((0, 0, 0, 0))
                 self.skeleton.draw(char_surface)
-
-                # Apply red tint
-                red_overlay = pygame.Surface(
-                    (self.width, self.height), pygame.SRCALPHA)
+                # Apply red tint to character only
+                red_overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
                 red_overlay.fill((255, 0, 0, 128))
-                char_surface.blit(red_overlay, (0, 0),
-                                  special_flags=pygame.BLEND_RGBA_MULT)
-
-                # Draw tinted character
+                char_surface.blit(red_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 self.screen.blit(char_surface, (0, 0))
 
         # Draw UI
