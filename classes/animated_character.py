@@ -4,9 +4,12 @@ Integrates the skeletal animation system into the 2MB game
 """
 
 import pygame
+from collections import Counter
+
 from .body_parts import BodyParts
 from .skeleton import Skeleton, BodyPart
 from .animation import AnimationController
+from .body_parts_profiles import BodyPartsConfig
 
 
 class AnimatedCharacter:
@@ -47,9 +50,8 @@ class AnimatedCharacter:
         # 載入圖片
         original_image = pygame.image.load(image_path).convert_alpha()
 
-    # 獲取身體部位定義 - 優先使用已載入的 surface 作為來源
-    from .body_parts_profiles import BodyPartsConfig
-    body_parts_def = BodyPartsConfig.from_surface(original_image, image_path)
+        # 獲取身體部位定義 - 自動根據圖片路徑選擇配置
+        body_parts_def = BodyPartsConfig.from_image_path(image_path)
         parts_dict = body_parts_def.get_all_parts()
 
         # 切割圖片並創建身體部位
@@ -318,7 +320,6 @@ class AnimatedCharacter:
 
     def _get_dominant_colors_fast(self, surface, num_colors):
         """快速提取主色調（使用 main.py 的方法）"""
-        from collections import Counter
 
         width, height = surface.get_size()
         colors = []

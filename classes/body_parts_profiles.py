@@ -1,117 +1,188 @@
-"""Profiles / presets for body parts sizes and offsets
-This module provides mappings for different body part presets used by
-the character builder and editor tools.
-
-It also includes a lightweight compatibility shim (BodyPartsConfig)
-used by the AnimatedCharacter class to obtain crop rectangles for a
-given T-pose surface. When explicit metadata is missing the shim will
-heuristically slice the image so the game remains runnable.
 """
+身體部位切割配置檔案
+支援多個角色配置，每個角色有獨立的切割座標
+"""
+import json
 
+# 預設配置：原始 sample/tpose.png
 DEFAULT_PROFILE = {
-    'torso': {'length': 90, 'position': [0, 0]},
-    'head': {'length': 24, 'position': [0, -70]},
-
-    'left_upper_arm': {'length': 42, 'position': [-76, -68]},
-    'left_forearm': {'length': 36, 'position': [-36, 31]},
-
-    'right_upper_arm': {'length': 42, 'position': [76, -68]},
-    'right_forearm': {'length': 36, 'position': [36, 31]},
-
-    'left_thigh': {'length': 50, 'position': [-44, 88]},
-    'left_shin': {'length': 50, 'position': [-11, 72]},
-
-    'right_thigh': {'length': 50, 'position': [44, 88]},
-    'right_shin': {'length': 50, 'position': [11, 72]},
+    'name': 'default',
+    'image_size': (1028, 720),
+    'parts': {
+        'head': (462, 65, 104, 104),
+        'torso': (447, 172, 133, 160),
+        'left_upper_arm': (380, 161, 65, 74),
+        'left_forearm': (218, 161, 160, 75),
+        'right_upper_arm': (583, 161, 65, 74),
+        'right_forearm': (650, 161, 160, 75),
+        'left_thigh': (433, 363, 79, 113),
+        'left_shin': (431, 485, 72, 169),
+        'right_thigh': (516, 363, 79, 113),
+        'right_shin': (525, 485, 72, 169),
+    }
 }
 
+# Player 1 配置（需要調整）
+PLAYER1_PROFILE = {
+    'name': 'player1',
+    'image_size': (1028, 720),
+    'parts': {
+        # TODO: 使用 tools/adjust_tool.py 調整這些座標
+        'head': (462, 65, 104, 104),
+        'torso': (447, 172, 133, 160),
+        'left_upper_arm': (380, 161, 65, 74),
+        'left_forearm': (218, 161, 160, 75),
+        'right_upper_arm': (583, 161, 65, 74),
+        'right_forearm': (650, 161, 160, 75),
+        'left_thigh': (433, 363, 79, 113),
+        'left_shin': (431, 485, 72, 169),
+        'right_thigh': (516, 363, 79, 113),
+        'right_shin': (525, 485, 72, 169),
+    }
+}
+
+# Player 2 配置（需要調整）
+PLAYER2_PROFILE = {
+    'name': 'player2',
+    'image_size': (1028, 720),
+    'parts': {
+        # TODO: 使用 tools/adjust_tool.py 調整這些座標
+        'head': (462, 65, 104, 104),
+        'torso': (447, 172, 133, 160),
+        'left_upper_arm': (380, 161, 65, 74),
+        'left_forearm': (218, 161, 160, 75),
+        'right_upper_arm': (583, 161, 65, 74),
+        'right_forearm': (650, 161, 160, 75),
+        'left_thigh': (433, 363, 79, 113),
+        'left_shin': (431, 485, 72, 169),
+        'right_thigh': (516, 363, 79, 113),
+        'right_shin': (525, 485, 72, 169),
+    }
+}
+
+# 所有配置的映射
 PROFILES = {
     'default': DEFAULT_PROFILE,
+    'player1': PLAYER1_PROFILE,
+    'player2': PLAYER2_PROFILE,
+}
+
+# 圖片路徑到配置的自動映射
+PATH_TO_PROFILE = {
+    'sample/tpose.png': 'default',
+    'assets/photo/tpose.png': 'default',
+    'assets/photo/player1/tpose.png': 'player1',
+    'assets/photo/player2/tpose.png': 'player2',
 }
 
 
 class BodyPartsConfig:
-    """Compatibility shim for tools and AnimatedCharacter.
+    """動態身體部位配置類別"""
 
-    The original project stored crop rectangles for each body part. To
-    remain robust, this class exposes from_surface and from_image_path
-    factory methods and a get_all_parts() accessor; it will attempt to
-    infer reasonable crop rects from the given surface when explicit
-    metadata is not available.
-    """
-
-    def __init__(self, parts_map=None):
-        # parts_map: dict(part_name -> (x, y, w, h))
-        self.parts_map = parts_map or {}
-
-    @staticmethod
-    def from_surface(surface, image_path=None):
-        """Create a BodyPartsConfig by heuristically slicing the surface.
-
-        This is a best-effort fallback so the code remains importable and
-        runnable even if there isn't exact metadata. It returns a map with
-        rectangles covering areas of the surface.
+    def __init__(self, profile_name='default'):
         """
-        try:
-            w, h = surface.get_size()
-        except Exception:
-            # Fallback: single full-image torso
-            return BodyPartsConfig({'torso': (0, 0, 64, 64)})
+        初始化身體部位配置
 
-        # Heuristic divisions: center for torso, top for head, left/right for limbs
-        parts = {}
+        Args:
+            profile_name: 配置名稱 ('default', 'player1', 'player2' 或自定義)
+        """
+        self.profile_name = profile_name
+        self.load_profile(profile_name)
 
-        # Torso: center big box
-        torso_w = int(w * 0.45)
-        torso_h = int(h * 0.35)
-        torso_x = int((w - torso_w) / 2)
-        torso_y = int((h - torso_h) / 2)
-        parts['torso'] = (torso_x, torso_y, torso_w, torso_h)
+    def load_profile(self, profile_name):
+        """載入指定配置"""
+        if profile_name not in PROFILES:
+            print(f"⚠️  配置 '{profile_name}' 不存在，使用預設配置")
+            profile_name = 'default'
 
-        # Head: top center
-        head_w = int(w * 0.25)
-        head_h = int(h * 0.18)
-        head_x = int((w - head_w) / 2)
-        head_y = int(max(0, torso_y - head_h - 8))
-        parts['head'] = (head_x, head_y, head_w, head_h)
+        profile = PROFILES[profile_name]
+        self.name = profile['name']
+        self.image_size = profile['image_size']
 
-        # Arms: left / right vertical strips beside torso
-        arm_w = int(w * 0.18)
-        arm_h = int(h * 0.28)
-        left_arm_x = max(0, torso_x - arm_w - 8)
-        right_arm_x = min(w - arm_w, torso_x + torso_w + 8)
-        arm_y = torso_y - 10
-        parts['left_upper_arm'] = (left_arm_x, arm_y, arm_w, arm_h)
-        parts['left_forearm'] = (left_arm_x, arm_y + int(arm_h / 2), arm_w, int(arm_h / 2))
-        parts['right_upper_arm'] = (right_arm_x, arm_y, arm_w, arm_h)
-        parts['right_forearm'] = (right_arm_x, arm_y + int(arm_h / 2), arm_w, int(arm_h / 2))
-
-        # Legs: bottom area
-        leg_w = int(w * 0.18)
-        leg_h = int(h * 0.30)
-        left_leg_x = torso_x + 4
-        right_leg_x = torso_x + torso_w - leg_w - 4
-        leg_y = torso_y + torso_h - 8
-        parts['left_thigh'] = (left_leg_x, leg_y, leg_w, leg_h)
-        parts['left_shin'] = (left_leg_x, leg_y + int(leg_h / 2), leg_w, int(leg_h / 2))
-        parts['right_thigh'] = (right_leg_x, leg_y, leg_w, leg_h)
-        parts['right_shin'] = (right_leg_x, leg_y + int(leg_h / 2), leg_w, int(leg_h / 2))
-
-        return BodyPartsConfig(parts)
+        # 載入所有部位座標
+        parts = profile['parts']
+        self.head = parts['head']
+        self.torso = parts['torso']
+        self.left_upper_arm = parts['left_upper_arm']
+        self.left_forearm = parts['left_forearm']
+        self.right_upper_arm = parts['right_upper_arm']
+        self.right_forearm = parts['right_forearm']
+        self.left_thigh = parts['left_thigh']
+        self.left_shin = parts['left_shin']
+        self.right_thigh = parts['right_thigh']
+        self.right_shin = parts['right_shin']
 
     @staticmethod
-    def from_image_path(path):
-        """Load a surface via pygame and call from_surface."""
-        try:
-            import pygame
-            surf = pygame.image.load(path).convert_alpha()
-            return BodyPartsConfig.from_surface(surf, path)
-        except Exception:
-            # Fallback: empty config
-            return BodyPartsConfig({'torso': (0, 0, 64, 64)})
+    def from_image_path(image_path):
+        """根據圖片路徑自動選擇配置"""
+        # 標準化路徑分隔符
+        norm_path = image_path.replace('\\', '/')
+
+        # 檢查是否有完全匹配
+        if norm_path in PATH_TO_PROFILE:
+            profile_name = PATH_TO_PROFILE[norm_path]
+            print(f"✓ 自動偵測配置: {profile_name} (for {image_path})")
+            return BodyPartsConfig(profile_name)
+
+        # 檢查路徑包含關鍵字
+        if 'player1' in norm_path.lower():
+            print(f"✓ 自動偵測配置: player1 (for {image_path})")
+            return BodyPartsConfig('player1')
+        elif 'player2' in norm_path.lower():
+            print(f"✓ 自動偵測配置: player2 (for {image_path})")
+            return BodyPartsConfig('player2')
+
+        # 預設配置
+        print(f"✓ 使用預設配置 (for {image_path})")
+        return BodyPartsConfig('default')
 
     def get_all_parts(self):
-        return self.parts_map
+        """返回所有身體部位的字典"""
+        return {
+            'head': self.head,
+            'torso': self.torso,
+            'left_upper_arm': self.left_upper_arm,
+            'left_forearm': self.left_forearm,
+            'right_upper_arm': self.right_upper_arm,
+            'right_forearm': self.right_forearm,
+            'left_thigh': self.left_thigh,
+            'left_shin': self.left_shin,
+            'right_thigh': self.right_thigh,
+            'right_shin': self.right_shin,
+        }
 
-def get_profile(name='default'):
-    return PROFILES.get(name, DEFAULT_PROFILE)
+    def save_to_file(self, filename):
+        """將當前配置儲存到檔案"""
+        profile = {
+            'name': self.name,
+            'image_size': self.image_size,
+            'parts': self.get_all_parts()
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(profile, f, indent=4, ensure_ascii=False)
+        print(f"✓ 配置已儲存到: {filename}")
+
+    @staticmethod
+    def load_from_file(filename):
+        """從檔案載入配置"""
+        with open(filename, 'r', encoding='utf-8') as f:
+            profile = json.load(f)
+
+        config = BodyPartsConfig.__new__(BodyPartsConfig)
+        config.name = profile['name']
+        config.image_size = tuple(profile['image_size'])
+
+        parts = profile['parts']
+        for part_name, coords in parts.items():
+            setattr(config, part_name, tuple(coords))
+
+        print(f"✓ 配置已載入: {filename}")
+        return config
+
+
+# 向後兼容：保留原始 BodyParts 類別
+class BodyParts(BodyPartsConfig):
+    """向後兼容的身體部位類別（使用預設配置）"""
+
+    def __init__(self):
+        super().__init__('default')

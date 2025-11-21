@@ -2,7 +2,9 @@
 Action pose data module
 Defines pose data for various actions
 """
-
+import os
+import json
+import math
 
 class Poses:
     """Stores pose data for various actions"""
@@ -167,8 +169,6 @@ class Poses:
         Returns:
             姿势数据字典，如果加载失败返回None
         """
-        import os
-        import json
 
         json_file = f'pose_{pose_name}.json'
 
@@ -184,8 +184,7 @@ class Poses:
     @staticmethod
     def get_all_poses():
         """返回所有姿勢的字典，優先從 poses_all.json 載入"""
-        import json
-        import os
+
         
         # 嘗試從 poses_all.json 載入
         json_path = 'poses_all.json'
@@ -377,7 +376,7 @@ class AnimationController:
                 self.idle_time += self.idle_sway_speed
 
                 # Calculate torso vertical movement (breathing effect)
-                import math
+
                 # Torso vertical movement amplitude (breathing feel)
                 # 2 pixels up and down
                 vertical_sway = math.sin(self.idle_time) * 2.0

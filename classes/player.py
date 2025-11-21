@@ -2,7 +2,10 @@ import pygame
 from typing import Optional, Tuple
 import random
 import os
+import threading
+import time
 
+from classes.animated_character import AnimatedCharacter
 
 class Player:
     """Simple player entity used by GameScene.
@@ -42,7 +45,7 @@ class Player:
 
         if use_animation:
             try:
-                from classes.animated_character import AnimatedCharacter
+                # from classes.animated_character import AnimatedCharacter
                 # 使用指定的圖片或默認的tpose.png
                 anim_path = animation_image or "assets/photo/tpose.png"
                 if os.path.exists(anim_path):
@@ -156,9 +159,8 @@ class Player:
         self.is_hurt = True
         self.trigger_action('hurt', 0.5)
         # 0.5秒後恢復
-        import threading
+
         def reset_hurt():
-            import time
             time.sleep(0.5)
             self.is_hurt = False
         threading.Thread(target=reset_hurt, daemon=True).start()
