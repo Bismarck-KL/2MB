@@ -89,31 +89,38 @@ class Player:
         # collision / draw rect
         self.rect = pygame.Rect(0, 0, w, h)
         self.rect.center = (int(self.pos.x), int(self.pos.y))
+        
+        # 格鬥遊戲屬性
+        self.position = [float(self.pos.x), float(self.pos.y)]  # [x, y] 用於格鬥遊戲
+        self.facing = 'right'  # 'left' or 'right'
+        self.is_jumping = False
+        self.velocity_y = 0
+        self.is_blocking = False
+        self.is_hurt = False
+        self.attack_cooldown = 0
+        self.current_attack = None
 
     def update(self, dt: float) -> None:
-        keys = pygame.key.get_pressed()
-        dir_x = 0
-        dir_y = 0
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
-            dir_y -= 1
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            dir_y += 1
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-            dir_x -= 1
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-            dir_x += 1
-
-        vel = pygame.Vector2(dir_x, dir_y)
-        if vel.length_squared() > 0:
-            vel = vel.normalize() * self.speed * dt
-            self.pos += vel
-
+        # 同步 position 和 pos
+        self.pos.x = self.position[0]
+        self.pos.y = self.position[1]
+        
         # clamp to screen
         half_w, half_h = self.size[0] / 2, self.size[1] / 2
         self.pos.x = max(half_w, min(self.app.WIDTH - half_w, self.pos.x))
         self.pos.y = max(half_h, min(self.app.HEIGHT - half_h, self.pos.y))
+        
+        # 更新 position
+        self.position[0] = self.pos.x
+        self.position[1] = self.pos.y
 
         self.rect.center = (int(self.pos.x), int(self.pos.y))
+        
+        # 更新攻擊冷卻
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= dt
+            if self.attack_cooldown <= 0:
+                self.current_attack = None
 
         # 更新動畫角色位置和狀態
         if self.use_animation and self.animated_char:
@@ -142,6 +149,19 @@ class Player:
         """觸發動作（僅動畫模式）"""
         if self.use_animation and self.animated_char:
             self.animated_char.trigger_action(action_name, duration)
+    
+    def take_damage(self, damage: int) -> None:
+        """受到傷害"""
+        self.health_points = max(0, self.health_points - damage)
+        self.is_hurt = True
+        self.trigger_action('hurt', 0.5)
+        # 0.5秒後恢復
+        import threading
+        def reset_hurt():
+            import time
+            time.sleep(0.5)
+            self.is_hurt = False
+        threading.Thread(target=reset_hurt, daemon=True).start()
 
 
 __all__ = ["Player"]
