@@ -29,128 +29,100 @@ python main.py
 - **3** or **P** - Punch action (auto-return)
 - **4** or **K** - Kick action (auto-return)
 - **Space** or **J** - Jump action (auto-return)
-- **5** or **H** - Hurt action (damage flash, auto-return)
-- **F5** or **L** - Load custom pose
-- **F6** - Hot-reload all poses
+# 2MB — 2D Character Animation (Pygame)
 
-### Pixel Art Controls
-- **F7** - Toggle pixelate effect on/off
-- **[** / **]** - Decrease/Increase pixel size (2-16)
-- **-** / **+** - Decrease/Increase color palette (4-32)
+This repository contains a lightweight 2D skeletal animation system built on Pygame, with a runtime pixel-art post-processing effect, pose management, and several developer tools. The project has recently been reorganized — core modules were moved into a `classes/` package and some legacy files were archived under `archive/unused/` for safety.
 
-### General
-- **ESC** - Quit
+This README reflects the current layout and how to run the project from the repo root.
 
-## 🎨 Pixel Art System
+## Quick overview
+- Entry point for the active project is `start.py` (menu + scenes).
+- The core animation/skeleton code now lives under the `classes/` package.
+- Utility modules (loading, resource manager, ui, color, mediapipe capture) are in `utils/`.
+- Development tools and older entry scripts were moved to `archive/unused/`.
 
-Real-time post-processing pixelate effect with:
-- **Adjustable Pixel Size**: Downscale factor from 2x to 16x
-- **Color Palette Reduction**: Limit colors from 4 to 32 for authentic retro look
-- **Dominant Color Extraction**: Automatic palette generation from rendered frame
-- **No Pre-processing Required**: Works on any character image dynamically
+## Requirements
+Install dependencies (recommended in a virtualenv):
 
-## Project Structure
-
-```
-motion test_3/
-├── main.py                    # Main animation player with integrated pixel art
-├── animation.py               # Animation controller and pose definitions
-├── skeleton.py                # Skeletal system with transforms
-├── body_parts.py              # Body part slicing and rendering
-├── body_parts_config.json     # Body part proportion settings
-├── poses_all.json             # Unified pose storage (all 8 poses)
-├── update_animation.py        # Helper for pose tool
-├── main_backup.py             # Backup before pixel art integration
-├── assets/
-│   └── photo/
-│       └── tpose.png          # Character T-pose image
-├── sample/                    # Reference images and test files
-├── tools/                     # Development and adjustment tools
-│   ├── README.md              # Tool documentation
-│   ├── pose_tool.py           # Interactive pose editor
-│   ├── adjust_tool.py         # Body proportion adjuster
-│   ├── style_config.py        # Pixel art style configurator
-│   ├── auto_watch.py          # File change watcher
-│   └── compare_images.py     # Visual comparison tool
-└── README.md                  # This file
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-## Development Tools
+requirements.txt currently lists:
+- pygame
+- mediapipe
+- opencv-python
 
-All development tools are located in the `tools/` directory. See `tools/README.md` for detailed documentation.
+(If you only want to run the UI/animation without Mediapipe/Opencv features, installing `pygame` alone is sufficient for the basic demo.)
 
-### Pose Editor
-```bash
-python tools/pose_tool.py
-```
-Interactive visual editor for creating and modifying character poses. Changes are saved to `poses_all.json` and can be hot-reloaded with F6.
+## Run (recommended)
+From the repository root (important so package imports resolve correctly):
 
-### Proportion Adjuster
-```bash
-python tools/adjust_tool.py
-```
-Adjust body part lengths and proportions in real-time. Saves to `body_parts_config.json`.
-
-## 如何替换角色
-
-### 方法1：修改默认图片
-直接替换 `sample/tpose.png` 文件，保持相同的文件名。
-
-## Technical Details
-
-### Skeletal Hierarchy
-```
-Torso (root)
-├── Head
-├── Left Upper Arm
-│   └── Left Forearm
-├── Right Upper Arm
-│   └── Right Forearm
-├── Left Thigh
-│   └── Left Calf
-└── Right Thigh
-    └── Right Calf
+```powershell
+python start.py
 ```
 
-### Coordinate System
-- Parent-child hierarchical transforms
-- Each part has local and world coordinates
-- Rotation based on customizable pivot points
+`start.py` shows a menu and launches the game scene or avatar creation scene. It uses `utils.resource_manager` to load images from `assets/`.
 
-### Animation System
-- Linear interpolation (LERP) for smooth transitions
-- Ease-out function for natural movement
-- Configurable transition speed
+## Alternate: archived `main.py` (legacy)
+There is an archived legacy player at `archive/unused/main.py`. It was updated to import from the `classes` package and includes a small `sys.path` shim so you can run it directly:
 
-### Pixel Art Implementation
-- **Method B (Post-Processing)**: Entire rendered frame is pixelated
-- **Dominant Color Extraction**: k-means clustering on rendered pixels
-- **Nearest Color Mapping**: Color quantization to extracted palette
-- **Downscale → Quantize → Upscale**: Three-step process for authentic look
+```powershell
+python .\archive\unused\main.py
+```
 
-## Troubleshooting
+Note: running archived scripts directly may require running from the repo root or accepting the shim that adds the repo root to `sys.path`.
 
-### Character not displaying correctly
-- Check image path in `body_parts.py`
-- Verify slice coordinates match your image dimensions
-- Use `tools/adjust_tool.py` to adjust proportions
+## Controls (game scene)
+- 1 / B — Block (auto-return)
+- 2 — Ready
+- 3 / P — Punch (auto-return)
+- 4 / K — Kick (auto-return)
+- Space / J — Jump (auto-return)
+- 5 / H — Hurt (auto-return + red flash)
+- F5 / L — Load custom pose
+- F6 — Hot-reload poses
+- F7 — Toggle pixelate effect
+- [ / ] — Pixel size
+- - / + — Palette color count
+- ESC — Quit
 
-### Actions feel unnatural
-- Adjust pose rotations in `poses_all.json`
-- Use `tools/pose_tool.py` for visual editing
-- Modify `transition_speed` in `animation.py`
+## Project layout (relevant parts)
 
-### Pixel art looks wrong
-- Press F7 to toggle effect on/off
-- Adjust pixel size with [] keys (try 8 for classic look)
-- Adjust color count with -+ keys (try 16 for retro feel)
+```
+.
+├─ assets/                # images and media
+├─ classes/               # core animation modules (animation, skeleton, body_parts, profiles)
+├─ utils/                 # helpers: resource_manager, loading, ui, color, mediapipe_capture
+├─ tools/                 # (some tools may have been archived) dev helpers and editors
+├─ archive/unused/        # archived legacy scripts (safe to inspect/restore)
+├─ start.py               # application + scene registry (recommended entrypoint)
+├─ menu_scene.py
+├─ game_scene.py
+├─ avatar_create.py
+├─ requirements.txt
+└─ README.md
+```
+
+## Recent refactor notes
+- The core modules `animation.py`, `skeleton.py`, `body_parts.py`, and `body_parts_profiles.py` were moved into `classes/` and imports across the project were updated to use `classes.*`.
+- A compatibility shim (`BodyPartsConfig`) was added to `classes/body_parts_profiles.py` so the AnimatedCharacter can still slice T-pose surfaces even when explicit metadata is missing.
+- Some older files (e.g., the original `main.py`, `launcher.py`, and some tools) were moved to `archive/unused/` rather than deleted so you can restore them if needed.
+
+
+## Developer notes
+- The repository keeps archived copies under `archive/unused/` when files are removed from the active runtime — this is a safety-first choice.
+- If you plan to restructure further, prefer absolute package imports (e.g., `from classes.skeleton import Skeleton`) and run from repo root to avoid import-time surprises.
+
+## Running tests / quick checks
+- Quick import check (no UI):
+
+```powershell
+python -c "import sys; sys.path.insert(0, r'..\2MB'); import start; print('start imported')"
+```
 
 ## License
+MIT
 
-MIT License
-
-## Credits
-
-- Animation System: Skeletal animation with Pygame
-- Pixel Art System: Post-process pixelate effect
-- GitHub: https://github.com/Bismarck-KL/2MB
+## Contact / Repo
+https://github.com/Bismarck-KL/2MB
