@@ -46,6 +46,9 @@ class AvatarCreateScene:
             hover_color=NEXT_HOVER,
         )
 
+        # which player are we capturing (1 or 2)
+        self.current_player = 1
+
         # capture photo button (center)
         capture_w, capture_h = 180, 56
         capture_x = (self.app.WIDTH - capture_w) // 2
@@ -53,7 +56,7 @@ class AvatarCreateScene:
         self.capture_rect = pygame.Rect(capture_x, capture_y, capture_w, capture_h)
         self.capture_button = Button(
             self.capture_rect,
-            text="拍照成為Player1",
+            text=f"拍照成為Player{self.current_player}",
             font=self.font,
             base_color=(120,180,255),
             hover_color=(80,140,220),
@@ -68,110 +71,114 @@ class AvatarCreateScene:
         self.capture_zoom = 1.2
         # optional guide overlay (silhouette) for reference while capturing
         self.guide_surf = None
+        # base alpha (0-255) and a multiplicative factor to make the guide more transparent
         self.guide_alpha = 220
+        self.guide_alpha_factor = 0.7  # reduce opacity by 30%
         self.guide_outline_surf = None
         # auto-capture countdown (seconds). None when not counting down.
         self.capture_countdown = None
 
-        def _load_guide_from_disk():
-            try:
-                base_dir = os.path.join("assets", "photo", "player1")
-                preferred = os.path.join(base_dir, "guide.png")
-
-                guide_path = None
-                if os.path.exists(preferred):
-                    guide_path = preferred
-                else:
-                    # fallback: find first matching image file in folder (accept guide.png.png etc.)
-                    if os.path.isdir(base_dir):
-                        for name in os.listdir(base_dir):
-                            low = name.lower()
-                            if low.endswith(('.png', '.jpg', '.jpeg', '.webp')) and 'guide' in low:
-                                guide_path = os.path.join(base_dir, name)
-                                break
-                        # if still not found, pick any image
-                        if guide_path is None:
-                            for name in os.listdir(base_dir):
-                                low = name.lower()
-                                if low.endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                                    guide_path = os.path.join(base_dir, name)
-                                    break
-
-                if not guide_path or not os.path.exists(guide_path):
-                    return None, None
-
-                # Simply load the image (prefer its alpha channel if present)
-                guide = None
-                loader_used = None
-                try:
-                    guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
-                    loader_used = 'pygame.convert_alpha'
-                except Exception:
-                    try:
-                        guide = pygame.image.load(os.path.abspath(guide_path)).convert()
-                        loader_used = 'pygame.convert'
-                    except Exception:
-                        guide = None
-
-                # if pygame failed, try OpenCV -> numpy -> pygame surface fallback
-                if guide is None:
-                    try:
-                        import cv2 as _cv2
-                        import numpy as _np
-                        img = _cv2.imread(guide_path, _cv2.IMREAD_UNCHANGED)
-                        if img is not None:
-                            # if image has alpha channel, keep it; else convert to RGBA
-                            if img.ndim == 3 and img.shape[2] == 4:
-                                img_rgba = _cv2.cvtColor(img, _cv2.COLOR_BGRA2RGBA)
-                            else:
-                                img_rgb = _cv2.cvtColor(img, _cv2.COLOR_BGR2RGB)
-                                alpha = _np.full((img_rgb.shape[0], img_rgb.shape[1], 1), 255, dtype=_np.uint8)
-                                img_rgba = _np.concatenate([img_rgb, alpha], axis=2)
-                            h, w = img_rgba.shape[:2]
-                            try:
-                                guide = pygame.image.frombuffer(img_rgba.tobytes(), (w, h), 'RGBA')
-                                loader_used = 'cv2_frombuffer'
-                            except Exception:
-                                guide = None
-                    except Exception:
-                        pass
-
-                # Also generate a high-contrast outline surface using OpenCV Canny
-                guide_outline = None
-                try:
-                    import cv2 as _cv2
-                    import numpy as _np
-                    img_cv = _cv2.imread(guide_path, _cv2.IMREAD_GRAYSCALE)
-                    if img_cv is not None:
-                        # blur slightly then Canny
-                        blurred = _cv2.GaussianBlur(img_cv, (5, 5), 0)
-                        edges = _cv2.Canny(blurred, 50, 150)
-                        # dilate edges to make lines thicker and more visible
-                        try:
-                            kernel = _cv2.getStructuringElement(_cv2.MORPH_RECT, (3, 3))
-                            edges = _cv2.dilate(edges, kernel, iterations=1)
-                        except Exception:
-                            pass
-                        h, w = edges.shape[:2]
-                        # create RGBA array for outline: white lines, transparent elsewhere
-                        outline = _np.zeros((h, w, 4), dtype=_np.uint8)
-                        outline[edges > 0] = [255, 255, 255, 255]
-                        try:
-                            guide_outline = pygame.image.frombuffer(outline.tobytes(), (w, h), 'RGBA')
-                        except Exception:
-                            guide_outline = None
-                except Exception:
-                    guide_outline = None
-                return guide, guide_outline
-            except Exception:
-                return None, None
+        # NOTE: guide loader is implemented as a class method below.
 
         # initial attempt to load (may be refreshed later when capture starts)
         try:
-            self.guide_surf, self.guide_outline_surf = _load_guide_from_disk()
+            self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
         except Exception:
             self.guide_surf = None
             self.guide_outline_surf = None
+
+    def _load_guide_from_disk(self, player=1):
+        try:
+            base_dir = os.path.join("assets", "photo", f"player{player}")
+            preferred = os.path.join(base_dir, "guide.png")
+
+            guide_path = None
+            if os.path.exists(preferred):
+                guide_path = preferred
+            else:
+                # fallback: find first matching image file in folder (accept guide.png.png etc.)
+                if os.path.isdir(base_dir):
+                    for name in os.listdir(base_dir):
+                        low = name.lower()
+                        if low.endswith(('.png', '.jpg', '.jpeg', '.webp')) and 'guide' in low:
+                            guide_path = os.path.join(base_dir, name)
+                            break
+                    # if still not found, pick any image
+                    if guide_path is None:
+                        for name in os.listdir(base_dir):
+                            low = name.lower()
+                            if low.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                                guide_path = os.path.join(base_dir, name)
+                                break
+
+            if not guide_path or not os.path.exists(guide_path):
+                return None, None
+
+            # Simply load the image (prefer its alpha channel if present)
+            guide = None
+            loader_used = None
+            try:
+                guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
+                loader_used = 'pygame.convert_alpha'
+            except Exception:
+                try:
+                    guide = pygame.image.load(os.path.abspath(guide_path)).convert()
+                    loader_used = 'pygame.convert'
+                except Exception:
+                    guide = None
+
+            # if pygame failed, try OpenCV -> numpy -> pygame surface fallback
+            if guide is None:
+                try:
+                    import cv2 as _cv2
+                    import numpy as _np
+                    img = _cv2.imread(guide_path, _cv2.IMREAD_UNCHANGED)
+                    if img is not None:
+                        # if image has alpha channel, keep it; else convert to RGBA
+                        if img.ndim == 3 and img.shape[2] == 4:
+                            img_rgba = _cv2.cvtColor(img, _cv2.COLOR_BGRA2RGBA)
+                        else:
+                            img_rgb = _cv2.cvtColor(img, _cv2.COLOR_BGR2RGB)
+                            alpha = _np.full((img_rgb.shape[0], img_rgb.shape[1], 1), 255, dtype=_np.uint8)
+                            img_rgba = _np.concatenate([img_rgb, alpha], axis=2)
+                        h, w = img_rgba.shape[:2]
+                        try:
+                            guide = pygame.image.frombuffer(img_rgba.tobytes(), (w, h), 'RGBA')
+                            loader_used = 'cv2_frombuffer'
+                        except Exception:
+                            guide = None
+                except Exception:
+                    pass
+
+            # Also generate a high-contrast outline surface using OpenCV Canny
+            guide_outline = None
+            try:
+                import cv2 as _cv2
+                import numpy as _np
+                img_cv = _cv2.imread(guide_path, _cv2.IMREAD_GRAYSCALE)
+                if img_cv is not None:
+                    # blur slightly then Canny
+                    blurred = _cv2.GaussianBlur(img_cv, (5, 5), 0)
+                    edges = _cv2.Canny(blurred, 50, 150)
+                    # dilate edges to make lines thicker and more visible
+                    try:
+                        kernel = _cv2.getStructuringElement(_cv2.MORPH_RECT, (3, 3))
+                        edges = _cv2.dilate(edges, kernel, iterations=1)
+                    except Exception:
+                        pass
+                    h, w = edges.shape[:2]
+                    # create RGBA array for outline: white lines, transparent elsewhere
+                    outline = _np.zeros((h, w, 4), dtype=_np.uint8)
+                    outline[edges > 0] = [255, 255, 255, 255]
+                    try:
+                        guide_outline = pygame.image.frombuffer(outline.tobytes(), (w, h), 'RGBA')
+                    except Exception:
+                        guide_outline = None
+            except Exception:
+                guide_outline = None
+            return guide, guide_outline
+        except Exception:
+            return None, None
 
     def handle_event(self, event):
         # keyboard: Esc returns to menu
@@ -200,13 +207,12 @@ class AvatarCreateScene:
                 print("Camera open error:", e)
                 self.capturing = False
                 self.cap = None
-            # Only reload guide if we don't already have one (avoid transient reload failures)
-            if not self.guide_surf:
-                try:
-                    self.guide_surf, self.guide_outline_surf = _load_guide_from_disk()
-                except Exception:
-                    self.guide_surf = None
-                    self.guide_outline_surf = None
+            # reload guide for the current player (may be updated between captures)
+            try:
+                self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
+            except Exception:
+                self.guide_surf = None
+                self.guide_outline_surf = None
             # start auto-capture countdown (seconds)
             self.capture_countdown = 20.0
             print(f"Auto-capture started: {self.capture_countdown} seconds")
@@ -299,15 +305,58 @@ class AvatarCreateScene:
                 box_rect = pygame.Rect(preview_x - pad, box_top, target_w + pad * 2, box_h)
                 pygame.draw.rect(self.screen, (10,10,10), box_rect)
                 self.screen.blit(surf, (preview_x, preview_y))
+
+                # overlay panel for readable header + note (semi-transparent)
+                try:
+                    overlay_h = 64
+                    overlay_w = target_w + pad * 2
+                    overlay_surf = pygame.Surface((overlay_w, overlay_h), pygame.SRCALPHA)
+                    overlay_surf.fill((0, 0, 0, 180))
+                    overlay_x = preview_x - pad
+                    overlay_y = box_top + 6
+                    # rounded rect fallback: draw rect on temp surface
+                    try:
+                        pygame.draw.rect(overlay_surf, (0,0,0,180), pygame.Rect(0,0,overlay_w,overlay_h), border_radius=8)
+                    except Exception:
+                        overlay_surf.fill((0,0,0,180))
+
+                    # header text (larger) with subtle shadow for contrast
+                    header_text = f"拍攝中：Player {self.current_player}"
+                    header_surf = self.title_font.render(header_text, True, (255, 255, 255))
+                    shadow = self.title_font.render(header_text, True, (0,0,0))
+                    h_x = 12
+                    h_y = 6
+                    overlay_surf.blit(shadow, (h_x+2, h_y+2))
+                    overlay_surf.blit(header_surf, (h_x, h_y))
+
+                    # explanatory note (smaller)
+                    if self.current_player == 1:
+                        note = "完成後會自動切換到 Player 2，請準備好下一位。"
+                    else:
+                        note = "已拍攝 Player 2，完成後會回到建立畫面。"
+                    note_surf = self.font.render(note, True, (230, 230, 230))
+                    note_shadow = self.font.render(note, True, (0,0,0))
+                    n_x = 12
+                    n_y = h_y + header_surf.get_height() + 6
+                    overlay_surf.blit(note_shadow, (n_x+1, n_y+1))
+                    overlay_surf.blit(note_surf, (n_x, n_y))
+
+                    # blit overlay on main screen above preview
+                    self.screen.blit(overlay_surf, (overlay_x, overlay_y))
+                except Exception:
+                    pass
                 # draw optional semi-transparent guide overlay if available
                 if self.guide_surf:
                     try:
                         guide = pygame.transform.smoothscale(self.guide_surf, (target_w, target_h))
-                        # apply configured alpha
+                        # apply configured alpha multiplied by factor (reduce opacity)
                         try:
-                            guide.set_alpha(self.guide_alpha)
+                            alpha_val = int(self.guide_alpha * getattr(self, 'guide_alpha_factor', 1.0))
+                            guide.set_alpha(alpha_val)
                         except Exception:
                             pass
+
+                        # blit guide onto preview
                         self.screen.blit(guide, (preview_x, preview_y))
                     except Exception as e:
                         # don't let overlay errors break preview
@@ -361,105 +410,147 @@ class AvatarCreateScene:
     def _do_capture(self):
         """Perform capture save and update resources, then stop capture."""
         try:
-            save_dir = os.path.join("assets", "photo", "player1")
+            # save into the folder for current player (player1 or player2)
+            save_dir = os.path.join("assets", "photo", f"player{self.current_player}")
             os.makedirs(save_dir, exist_ok=True)
-            save_path = os.path.join(save_dir, "player1_photo.jpg")
+            save_path = os.path.join(save_dir, f"player{self.current_player}_photo.jpg")
             # last_frame is BGR (from OpenCV)
             cv2.imwrite(save_path, self.last_frame)
             print(f"Photo saved to {save_path}")
-            # follow player2 flow: do NOT pre-pixelate. Save the captured photo as the game's tpose
-            try:
-                tpose_path = os.path.join(save_dir, "tpose.png")
-                target_w, target_h = 1028, 720
-                # Use guide surface as a cutout mask if available. This disables
-                # the GrabCut/rembg removal path for now and uses the provided
-                # silhouette to create an alpha channel for the saved tpose.
-                used_guide_cutout = False
-                try:
-                    if getattr(self, 'guide_surf', None):
-                        try:
-                            import numpy as _np
-                            import cv2 as _cv2
-                            # scale guide surface to target size and extract RGBA bytes
-                            guide_scaled = pygame.transform.smoothscale(self.guide_surf, (target_w, target_h))
-                            guide_bytes = pygame.image.tostring(guide_scaled, 'RGBA')
-                            guide_arr = _np.frombuffer(guide_bytes, dtype=_np.uint8).reshape((target_h, target_w, 4))
-                            alpha_ch = guide_arr[:, :, 3]
-                            # If the guide has no meaningful alpha, derive mask from luminance
-                            if _np.mean(alpha_ch) < 10:
-                                lum = (_np.dot(guide_arr[:, :, :3], [0.2989, 0.5870, 0.1140])).astype(_np.uint8)
-                                mask = (lum > 10).astype(_np.uint8) * 255
-                            else:
-                                mask = (alpha_ch > 10).astype(_np.uint8) * 255
-                            # Apply configured guide_alpha as a multiplier to the mask
-                            try:
-                                factor = float(getattr(self, 'guide_alpha', 255)) / 255.0
-                                mask = (_np.clip((mask.astype(_np.float32) * factor), 0, 255)).astype(_np.uint8)
-                                mask = (mask > 10).astype(_np.uint8) * 255
-                            except Exception:
-                                pass
 
-                            # resize captured frame and write RGBA using mask as alpha
-                            resized_bgr = _cv2.resize(self.last_frame, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
-                            b, g, r = _cv2.split(resized_bgr)
-                            alpha = mask.astype(_np.uint8)
-                            rgba = _cv2.merge([b, g, r, alpha])
-                            _cv2.imwrite(tpose_path, rgba)
-                            used_guide_cutout = True
-                        except Exception as e_gc:
-                            print("Mask-based cutout failed:", e_gc)
-                    if not used_guide_cutout:
-                        # fallback: simple resize without alpha
+            # create a tpose image (RGBA when possible) at the target size
+            tpose_path = os.path.join(save_dir, "tpose.png")
+            target_w, target_h = 1028, 720
+            used_guide_cutout = False
+            try:
+                if getattr(self, 'guide_surf', None):
+                    try:
+                        import numpy as _np
+                        import cv2 as _cv2
+                        # scale guide surface to target size and extract RGBA bytes
+                        guide_scaled = pygame.transform.smoothscale(self.guide_surf, (target_w, target_h))
+                        guide_bytes = pygame.image.tostring(guide_scaled, 'RGBA')
+                        guide_arr = _np.frombuffer(guide_bytes, dtype=_np.uint8).reshape((target_h, target_w, 4))
+                        alpha_ch = guide_arr[:, :, 3]
+                        # If the guide has no meaningful alpha, derive mask from luminance
+                        if _np.mean(alpha_ch) < 10:
+                            lum = (_np.dot(guide_arr[:, :, :3], [0.2989, 0.5870, 0.1140])).astype(_np.uint8)
+                            mask = (lum > 10).astype(_np.uint8) * 255
+                        else:
+                            mask = (alpha_ch > 10).astype(_np.uint8) * 255
+                        # Apply configured guide_alpha as a multiplier to the mask
                         try:
-                            import cv2 as _cv2
-                            img = _cv2.imread(save_path, _cv2.IMREAD_UNCHANGED)
-                            if img is not None:
-                                resized = _cv2.resize(img, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
-                                _cv2.imwrite(tpose_path, resized)
-                            else:
-                                import shutil
-                                shutil.copyfile(save_path, tpose_path)
+                            factor = float(getattr(self, 'guide_alpha', 255)) / 255.0
+                            # apply guide_alpha_factor to further reduce opacity in mask computation
+                            factor = factor * float(getattr(self, 'guide_alpha_factor', 1.0))
+                            mask = (_np.clip((mask.astype(_np.float32) * factor), 0, 255)).astype(_np.uint8)
+                            mask = (mask > 10).astype(_np.uint8) * 255
                         except Exception:
-                            try:
-                                import shutil
-                                shutil.copyfile(save_path, tpose_path)
-                            except Exception:
-                                pass
-                except Exception as e:
-                    print("Saving tpose failed:", e)
-                print(f"Saved tpose image to {tpose_path} (resized to 1028x720)")
-                # update resource manager if available (static image key)
-                try:
-                    if hasattr(self.app, 'res_mgr') and hasattr(self.app.res_mgr, 'image_loader'):
-                        import pygame as _pygame
-                        surf = _pygame.image.load(tpose_path)
+                            pass
+
+                        # resize captured frame and write RGBA using mask as alpha
+                        resized_bgr = _cv2.resize(self.last_frame, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
+                        b, g, r = _cv2.split(resized_bgr)
+                        alpha = mask.astype(_np.uint8)
+                        rgba = _cv2.merge([b, g, r, alpha])
+                        _cv2.imwrite(tpose_path, rgba)
+                        used_guide_cutout = True
+                    except Exception as e_gc:
+                        print("Mask-based cutout failed:", e_gc)
+
+                if not used_guide_cutout:
+                    # fallback: simple resize without alpha
+                    try:
+                        import cv2 as _cv2
+                        img = _cv2.imread(save_path, _cv2.IMREAD_UNCHANGED)
+                        if img is not None:
+                            resized = _cv2.resize(img, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
+                            _cv2.imwrite(tpose_path, resized)
+                        else:
+                            import shutil
+                            shutil.copyfile(save_path, tpose_path)
+                    except Exception:
                         try:
-                            surf = surf.convert_alpha()
+                            import shutil
+                            shutil.copyfile(save_path, tpose_path)
                         except Exception:
-                            surf = surf.convert()
-                        self.app.res_mgr.image_loader.images['player1'] = surf
-                        print("Resource manager: updated 'player1' image surface")
-                except Exception as e:
-                    print("Failed to update resource manager:", e)
-                # if game scene is active and player_1 exists, update its animated image
-                try:
-                    scene = getattr(self.app, 'scene', None)
-                    if scene and hasattr(scene, 'player_1') and hasattr(scene.player_1, 'set_animation_image'):
-                        scene.player_1.set_animation_image(tpose_path)
-                        print("Applied new animation image to in-game Player 1")
-                except Exception as e:
-                    print("Failed to apply animation image to player_1:", e)
+                            pass
             except Exception as e:
                 print("Saving tpose failed:", e)
+
+            print(f"Saved tpose image to {tpose_path} (resized to 1028x720)")
+
+            # update resource manager (static image key for the player)
+            try:
+                key = f'player{self.current_player}'
+                if hasattr(self.app, 'res_mgr') and hasattr(self.app.res_mgr, 'image_loader'):
+                    import pygame as _pygame
+                    surf = _pygame.image.load(tpose_path)
+                    try:
+                        surf = surf.convert_alpha()
+                    except Exception:
+                        surf = surf.convert()
+                    self.app.res_mgr.image_loader.images[key] = surf
+                    print(f"Resource manager: updated '{key}' image surface")
+            except Exception as e:
+                print("Failed to update resource manager:", e)
+
+            # if game scene is active, update the corresponding player's animated image
+            try:
+                scene = getattr(self.app, 'scene', None)
+                if scene:
+                    if self.current_player == 1 and hasattr(scene, 'player_1') and hasattr(scene.player_1, 'set_animation_image'):
+                        scene.player_1.set_animation_image(tpose_path)
+                        print("Applied new animation image to in-game Player 1")
+                    elif self.current_player == 2 and hasattr(scene, 'player_2') and hasattr(scene.player_2, 'set_animation_image'):
+                        scene.player_2.set_animation_image(tpose_path)
+                        print("Applied new animation image to in-game Player 2")
+            except Exception as e:
+                print("Failed to apply animation image to player:", e)
+
         except Exception as e:
             print("Capture failed:", e)
         finally:
-            # stop capture and clear countdown
+            # clear countdown
             try:
                 self.capture_countdown = None
             except Exception:
                 pass
-            self._stop_capture()
+            # If we just captured Player1, immediately start Player2 capture flow.
+            try:
+                if self.current_player == 1:
+                    # prepare to capture player 2
+                    self.current_player = 2
+                    # update capture button label
+                    try:
+                        self.capture_button.text = f"拍照成為Player{self.current_player}"
+                    except Exception:
+                        pass
+                    # reload guide for player2
+                    try:
+                        self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
+                    except Exception:
+                        self.guide_surf = None
+                        self.guide_outline_surf = None
+                    # start camera again for player2
+                    try:
+                        self.capturing = True
+                        self.cap = cv2.VideoCapture(0)
+                        if not self.cap.isOpened():
+                            print("Unable to open camera for Player2")
+                            self.capturing = False
+                            self.cap = None
+                        else:
+                            self.capture_countdown = 20.0
+                            print("Starting capture for Player2 (auto-capture in 20s)")
+                    except Exception as e:
+                        print("Failed to restart camera for Player2:", e)
+                else:
+                    # final stop after player2
+                    self._stop_capture()
+            except Exception:
+                # ensure capture is stopped on unexpected errors
+                self._stop_capture()
 
     def _remove_background(self, src_path: str, dst_path: str, target_w: int = 1028, target_h: int = 720) -> bool:
         """Remove background from `src_path` and write RGBA PNG to `dst_path`.
