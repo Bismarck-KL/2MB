@@ -80,6 +80,10 @@ class AvatarCreateScene:
         self.guide_outline_surf = None
         # auto-capture countdown (seconds). None when not counting down.
         self.capture_countdown = None
+        # after capturing player1, show generated preview and wait for Next
+        self.show_preview = False
+        self.preview_surf = None
+        self.preview_path = None
 
         # NOTE: guide loader is implemented as a class method below.
 
@@ -194,7 +198,50 @@ class AvatarCreateScene:
 
         # next button click -> go to GameScene
         if self.next_button.handle_event(event):
-            self.app.change_scene("GameScene")
+            # if we're showing the Player1 preview, Next should start Player2 capture
+            try:
+                if self.show_preview and self.current_player == 1:
+                    # prepare to capture player 2
+                    self.show_preview = False
+                    self.preview_surf = None
+                    self.preview_path = None
+                    self.current_player = 2
+                    # update capture button label
+                    try:
+                        self.capture_button.text = f"拍照成為Player{self.current_player}"
+                    except Exception:
+                        pass
+                    # reload guide for player2
+                    try:
+                        self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
+                    except Exception:
+                        self.guide_surf = None
+                        self.guide_outline_surf = None
+                    # start camera for player2
+                    try:
+                        self.capturing = True
+                        self.cap = cv2.VideoCapture(0)
+                        if not self.cap.isOpened():
+                            print("Unable to open camera for Player2")
+                            self.capturing = False
+                            self.cap = None
+                        else:
+                            try:
+                                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.capture_width))
+                                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.capture_height))
+                            except Exception:
+                                pass
+                            self.capture_countdown = 20.0
+                            print("Starting capture for Player2 (auto-capture in 20s)")
+                    except Exception as e:
+                        print("Failed to start camera for Player2:", e)
+                else:
+                    self.app.change_scene("GameScene")
+            except Exception:
+                try:
+                    self.app.change_scene("GameScene")
+                except Exception:
+                    pass
 
         # capture photo button click
         if self.capture_button.handle_event(event):
@@ -355,6 +402,31 @@ class AvatarCreateScene:
                     self.screen.blit(overlay_surf, (overlay_x, overlay_y))
                 except Exception:
                     pass
+                # if showing preview (Player1), draw it centered above preview
+                if self.show_preview and self.preview_surf:
+                    try:
+                        pw, ph = self.preview_surf.get_size()
+                        # scale preview to fit half the screen width if too large
+                        max_w = int(self.app.WIDTH * 0.5)
+                        if pw > max_w:
+                            scale = max_w / pw
+                            new_w = int(pw * scale)
+                            new_h = int(ph * scale)
+                            pv = pygame.transform.smoothscale(self.preview_surf, (new_w, new_h))
+                        else:
+                            pv = self.preview_surf
+                        pv_x = (self.app.WIDTH - pv.get_width()) // 2
+                        pv_y = box_top - pv.get_height() - 16
+                        # draw background for preview
+                        bg = pygame.Surface((pv.get_width()+8, pv.get_height()+8))
+                        bg.fill((20,20,20))
+                        self.screen.blit(bg, (pv_x-4, pv_y-4))
+                        self.screen.blit(pv, (pv_x, pv_y))
+                        # hint text
+                        hint = self.font.render('確認角色後按 Next 前往 Player2 拍照', True, (230,230,230))
+                        self.screen.blit(hint, ((self.app.WIDTH - hint.get_width())//2, pv_y + pv.get_height() + 8))
+                    except Exception:
+                        pass
                 # draw optional semi-transparent guide overlay if available
                 if self.guide_surf:
                     try:
@@ -547,41 +619,33 @@ class AvatarCreateScene:
                 self.capture_countdown = None
             except Exception:
                 pass
-            # If we just captured Player1, immediately start Player2 capture flow.
+            # After capture: if we just captured Player1, show the generated preview and wait
             try:
                 if self.current_player == 1:
-                    # prepare to capture player 2
-                    self.current_player = 2
-                    # update capture button label
+                    # stop camera and enter preview mode for Player1
                     try:
-                        self.capture_button.text = f"拍照成為Player{self.current_player}"
+                        self._stop_capture()
                     except Exception:
                         pass
-                    # reload guide for player2
+                    # load preview surface from tpose_path if available
                     try:
-                        self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
-                    except Exception:
-                        self.guide_surf = None
-                        self.guide_outline_surf = None
-                    # start camera again for player2
-                    try:
-                        self.capturing = True
-                        self.cap = cv2.VideoCapture(0)
-                        if not self.cap.isOpened():
-                            print("Unable to open camera for Player2")
-                            self.capturing = False
-                            self.cap = None
-                        else:
-                            # ensure the restarted camera uses the same requested resolution
-                            try:
-                                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.capture_width))
-                                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.capture_height))
-                            except Exception:
-                                pass
-                            self.capture_countdown = 20.0
-                            print("Starting capture for Player2 (auto-capture in 20s)")
+                        import pygame as _pygame
+                        pv = _pygame.image.load(tpose_path)
+                        try:
+                            pv = pv.convert_alpha()
+                        except Exception:
+                            pv = pv.convert()
+                        self.preview_surf = pv
+                        self.preview_path = tpose_path
+                        self.show_preview = True
+                        # update capture button to indicate completion
+                        try:
+                            self.capture_button.text = f"已拍攝 Player1"
+                        except Exception:
+                            pass
+                        print("Player1 capture complete - showing preview. Press Next to capture Player2.")
                     except Exception as e:
-                        print("Failed to restart camera for Player2:", e)
+                        print("Failed to load preview surf:", e)
                 else:
                     # final stop after player2
                     self._stop_capture()
