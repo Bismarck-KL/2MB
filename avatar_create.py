@@ -606,41 +606,12 @@ class AvatarCreateScene:
 
             print(f"Saved tpose image to {tpose_path} (resized to 1028x720)")
 
-            # update resource manager (static image key for the player)
+            # Stored tpose.png on disk but DO NOT update UI or in-game players automatically.
+            # (This avoids displaying the generated image immediately.)
             try:
-                key = f'player{self.current_player}'
-                if hasattr(self.app, 'res_mgr') and hasattr(self.app.res_mgr, 'image_loader'):
-                    import pygame as _pygame
-                    surf = _pygame.image.load(tpose_path)
-                    try:
-                        surf = surf.convert_alpha()
-                    except Exception:
-                        surf = surf.convert()
-                    self.app.res_mgr.image_loader.images[key] = surf
-                    print(f"Resource manager: updated '{key}' image surface")
-                    # also set preview surface immediately after saving for player1
-                    try:
-                        if self.current_player == 1:
-                            self.preview_surf = surf
-                            self.preview_path = tpose_path
-                            self.show_preview = True
-                    except Exception:
-                        pass
-            except Exception as e:
-                print("Failed to update resource manager:", e)
-
-            # if game scene is active, update the corresponding player's animated image
-            try:
-                scene = getattr(self.app, 'scene', None)
-                if scene:
-                    if self.current_player == 1 and hasattr(scene, 'player_1') and hasattr(scene.player_1, 'set_animation_image'):
-                        scene.player_1.set_animation_image(tpose_path)
-                        print("Applied new animation image to in-game Player 1")
-                    elif self.current_player == 2 and hasattr(scene, 'player_2') and hasattr(scene.player_2, 'set_animation_image'):
-                        scene.player_2.set_animation_image(tpose_path)
-                        print("Applied new animation image to in-game Player 2")
-            except Exception as e:
-                print("Failed to apply animation image to player:", e)
+                print(f"Saved tpose (not applied to UI) at {tpose_path}")
+            except Exception:
+                pass
 
         except Exception as e:
             print("Capture failed:", e)
@@ -650,33 +621,53 @@ class AvatarCreateScene:
                 self.capture_countdown = None
             except Exception:
                 pass
-            # After capture: if we just captured Player1, show the generated preview and wait
+            # After capture: if we just captured Player1, DO NOT show a preview.
+            # Immediately proceed to Player2 capture (start camera) so flow continues.
             try:
                 if self.current_player == 1:
-                    # stop camera and enter preview mode for Player1
+                    # stop current capture
                     try:
                         self._stop_capture()
                     except Exception:
                         pass
-                    # load preview surface from tpose_path if available
+
+                    # switch to player2 and start capture immediately
                     try:
-                        import pygame as _pygame
-                        pv = _pygame.image.load(tpose_path)
+                        self.current_player = 2
                         try:
-                            pv = pv.convert_alpha()
-                        except Exception:
-                            pv = pv.convert()
-                        self.preview_surf = pv
-                        self.preview_path = tpose_path
-                        self.show_preview = True
-                        # update capture button to indicate completion
-                        try:
-                            self.capture_button.text = f"已拍攝 Player1"
+                            self.capture_button.text = f"拍照成為Player{self.current_player}"
                         except Exception:
                             pass
-                        print("Player1 capture complete - showing preview. Press Next to capture Player2.")
-                    except Exception as e:
-                        print("Failed to load preview surf:", e)
+                        # reload guide for player2
+                        try:
+                            self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
+                        except Exception:
+                            self.guide_surf = None
+                            self.guide_outline_surf = None
+                        # start camera for player2
+                        try:
+                            self.capturing = True
+                            self.cap = cv2.VideoCapture(0)
+                            if not self.cap.isOpened():
+                                print("Unable to open camera for Player2")
+                                self.capturing = False
+                                self.cap = None
+                            else:
+                                try:
+                                    self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.capture_width))
+                                    self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.capture_height))
+                                except Exception:
+                                    pass
+                                self.capture_countdown = 20.0
+                                print("Starting capture for Player2 (auto-capture in 20s)")
+                        except Exception as e:
+                            print("Failed to start camera for Player2:", e)
+                    except Exception:
+                        # if switching fails, ensure capture is stopped
+                        try:
+                            self._stop_capture()
+                        except Exception:
+                            pass
                 else:
                     # final stop after player2
                     self._stop_capture()
