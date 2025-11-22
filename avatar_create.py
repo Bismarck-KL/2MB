@@ -595,6 +595,14 @@ class AvatarCreateScene:
                         surf = surf.convert()
                     self.app.res_mgr.image_loader.images[key] = surf
                     print(f"Resource manager: updated '{key}' image surface")
+                    # also set preview surface immediately after saving for player1
+                    try:
+                        if self.current_player == 1:
+                            self.preview_surf = surf
+                            self.preview_path = tpose_path
+                            self.show_preview = True
+                    except Exception:
+                        pass
             except Exception as e:
                 print("Failed to update resource manager:", e)
 
