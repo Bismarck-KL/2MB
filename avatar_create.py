@@ -69,6 +69,9 @@ class AvatarCreateScene:
         self.camera_scale = 0.6  # how big the camera preview is relative to screen
         # zoom factor applied only during capture preview (1.2 => 20% zoom)
         self.capture_zoom = 1.2
+        # desired capture resolution (attempt to set camera to this)
+        self.capture_width = 1280
+        self.capture_height = 720
         # optional guide overlay (silhouette) for reference while capturing
         self.guide_surf = None
         # base alpha (0-255) and a multiplicative factor to make the guide more transparent
@@ -203,6 +206,13 @@ class AvatarCreateScene:
                     print("Unable to open camera")
                     self.capturing = False
                     self.cap = None
+                else:
+                    # try to set a higher capture resolution for better clarity
+                    try:
+                        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.capture_width))
+                        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.capture_height))
+                    except Exception:
+                        pass
             except Exception as e:
                 print("Camera open error:", e)
                 self.capturing = False
@@ -414,8 +424,29 @@ class AvatarCreateScene:
             save_dir = os.path.join("assets", "photo", f"player{self.current_player}")
             os.makedirs(save_dir, exist_ok=True)
             save_path = os.path.join(save_dir, f"player{self.current_player}_photo.jpg")
-            # last_frame is BGR (from OpenCV)
-            cv2.imwrite(save_path, self.last_frame)
+            # last_frame is BGR (from OpenCV). Save a sharpened, high-res version if possible.
+            try:
+                import cv2 as _cv2
+                img = self.last_frame
+                if img is not None:
+                    # resize to desired capture resolution (use cubic for quality)
+                    try:
+                        img_resized = _cv2.resize(img, (int(self.capture_width), int(self.capture_height)), interpolation=_cv2.INTER_CUBIC)
+                    except Exception:
+                        img_resized = img
+
+                    # apply simple unsharp mask to increase perceived sharpness
+                    try:
+                        blurred = _cv2.GaussianBlur(img_resized, (0, 0), 3)
+                        sharpened = _cv2.addWeighted(img_resized, 1.5, blurred, -0.5, 0)
+                        _cv2.imwrite(save_path, sharpened)
+                    except Exception:
+                        _cv2.imwrite(save_path, img_resized)
+                else:
+                    cv2.imwrite(save_path, self.last_frame)
+            except Exception:
+                # fallback to raw write
+                cv2.imwrite(save_path, self.last_frame)
             print(f"Photo saved to {save_path}")
 
             # create a tpose image (RGBA when possible) at the target size
@@ -449,7 +480,7 @@ class AvatarCreateScene:
                             pass
 
                         # resize captured frame and write RGBA using mask as alpha
-                        resized_bgr = _cv2.resize(self.last_frame, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
+                        resized_bgr = _cv2.resize(self.last_frame, (target_w, target_h), interpolation=_cv2.INTER_CUBIC)
                         b, g, r = _cv2.split(resized_bgr)
                         alpha = mask.astype(_np.uint8)
                         rgba = _cv2.merge([b, g, r, alpha])
@@ -464,7 +495,7 @@ class AvatarCreateScene:
                         import cv2 as _cv2
                         img = _cv2.imread(save_path, _cv2.IMREAD_UNCHANGED)
                         if img is not None:
-                            resized = _cv2.resize(img, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
+                            resized = _cv2.resize(img, (target_w, target_h), interpolation=_cv2.INTER_CUBIC)
                             _cv2.imwrite(tpose_path, resized)
                         else:
                             import shutil
@@ -541,6 +572,12 @@ class AvatarCreateScene:
                             self.capturing = False
                             self.cap = None
                         else:
+                            # ensure the restarted camera uses the same requested resolution
+                            try:
+                                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.capture_width))
+                                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.capture_height))
+                            except Exception:
+                                pass
                             self.capture_countdown = 20.0
                             print("Starting capture for Player2 (auto-capture in 20s)")
                     except Exception as e:
