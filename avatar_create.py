@@ -98,7 +98,6 @@ class AvatarCreateScene:
                                     break
 
                 if not guide_path or not os.path.exists(guide_path):
-                    print(f"_load_guide_from_disk: guide_path not found: {guide_path} (cwd={os.getcwd()})")
                     return None, None
 
                 # Simply load the image (prefer its alpha channel if present)
@@ -107,13 +106,11 @@ class AvatarCreateScene:
                 try:
                     guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
                     loader_used = 'pygame.convert_alpha'
-                except Exception as e_load:
-                    print(f"_load_guide_from_disk: pygame.image.load.convert_alpha failed for {guide_path}:", e_load)
+                except Exception:
                     try:
                         guide = pygame.image.load(os.path.abspath(guide_path)).convert()
                         loader_used = 'pygame.convert'
-                    except Exception as e_load2:
-                        print(f"_load_guide_from_disk: pygame.image.load.convert failed for {guide_path}:", e_load2)
+                    except Exception:
                         guide = None
 
                 # if pygame failed, try OpenCV -> numpy -> pygame surface fallback
@@ -134,11 +131,10 @@ class AvatarCreateScene:
                             try:
                                 guide = pygame.image.frombuffer(img_rgba.tobytes(), (w, h), 'RGBA')
                                 loader_used = 'cv2_frombuffer'
-                            except Exception as e_buf:
-                                print(f"_load_guide_from_disk: pygame.frombuffer failed for {guide_path}:", e_buf)
+                            except Exception:
                                 guide = None
-                    except Exception as e_cv:
-                        print(f"_load_guide_from_disk: OpenCV fallback failed for {guide_path}:", e_cv)
+                    except Exception:
+                        pass
 
                 # Also generate a high-contrast outline surface using OpenCV Canny
                 guide_outline = None
@@ -166,11 +162,8 @@ class AvatarCreateScene:
                             guide_outline = None
                 except Exception:
                     guide_outline = None
-
-                print(f"Loaded guide from: {guide_path} (loader={loader_used})")
                 return guide, guide_outline
-            except Exception as e:
-                print("_load_guide_from_disk error:", e)
+            except Exception:
                 return None, None
 
         # initial attempt to load (may be refreshed later when capture starts)
@@ -214,24 +207,11 @@ class AvatarCreateScene:
                 except Exception:
                     self.guide_surf = None
                     self.guide_outline_surf = None
-            else:
-                # already loaded at init; keep existing surface
-                print("Guide already loaded in memory; skipping reload")
             # start auto-capture countdown (seconds)
             self.capture_countdown = 20.0
             print(f"Auto-capture started: {self.capture_countdown} seconds")
 
-            # report status and directory when missing
-            if not self.guide_surf:
-                base_dir = os.path.join("assets", "photo", "player1")
-                try:
-                    files = os.listdir(base_dir)
-                except Exception as e:
-                    files = [f"(failed to list: {e})"]
-                print(f"Guide loaded: {self.guide_surf is not None}, Outline loaded: {self.guide_outline_surf is not None}")
-                print(f"Checked directory {os.path.abspath(base_dir)} -> {files}")
-            else:
-                print(f"Guide loaded: {self.guide_surf is not None}, Outline loaded: {self.guide_outline_surf is not None}")
+            # do not print guide/load related status to console (silenced)
 
         # when in capture mode, use keys to control capture
         if self.capturing and event.type == pygame.KEYDOWN:
@@ -309,12 +289,15 @@ class AvatarCreateScene:
                 frame_rgb = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
                 surf = pygame.image.frombuffer(frame_rgb.tobytes(), (target_w, target_h), 'RGB')
                 preview_x = (self.app.WIDTH - target_w) // 2
-                preview_y = (self.app.HEIGHT - target_h) // 2 - 40
-                # dark background box
-                box_rect = pygame.Rect(preview_x - 8, preview_y - 8, target_w + 16, target_h + 56)
+                # center the preview image exactly in the window
+                preview_y = (self.app.HEIGHT - target_h) // 2
+                # smaller padding around image to avoid vertical bias and clipping
+                pad = 8
+                box_top = preview_y - pad
+                box_h = target_h + pad * 2
+                # dark background box (slightly larger than image)
+                box_rect = pygame.Rect(preview_x - pad, box_top, target_w + pad * 2, box_h)
                 pygame.draw.rect(self.screen, (10,10,10), box_rect)
-                # debug: draw red border so we can see preview bounds
-                pygame.draw.rect(self.screen, (255, 0, 0), box_rect, 2)
                 self.screen.blit(surf, (preview_x, preview_y))
                 # draw optional semi-transparent guide overlay if available
                 if self.guide_surf:
@@ -328,7 +311,7 @@ class AvatarCreateScene:
                         self.screen.blit(guide, (preview_x, preview_y))
                     except Exception as e:
                         # don't let overlay errors break preview
-                        print('Guide overlay error:', e)
+                        print('Overlay error:', e)
 
                 # draw high-contrast outline on top for visibility
                 if getattr(self, 'guide_outline_surf', None):
@@ -341,11 +324,12 @@ class AvatarCreateScene:
                         except Exception:
                             self.screen.blit(out_s, (preview_x, preview_y))
                     except Exception as e:
-                        print('Guide outline error:', e)
+                        print('Outline overlay error:', e)
 
-                # instructions
+                # instructions (clamped to remain on-screen)
                 instr = self.font.render('Press SPACE to capture, ESC to cancel', True, (230,230,230))
-                irect = instr.get_rect(center=(self.app.WIDTH//2, preview_y + target_h + 20))
+                instr_y = min(preview_y + target_h + 20, self.app.HEIGHT - 28)
+                irect = instr.get_rect(center=(self.app.WIDTH//2, instr_y))
                 self.screen.blit(instr, irect)
 
                 # countdown display (auto-capture)
@@ -353,16 +337,13 @@ class AvatarCreateScene:
                     if getattr(self, 'capture_countdown', None) is not None:
                         secs = max(0, int(math.ceil(self.capture_countdown)))
                         cd_txt = self.title_font.render(f"Auto capture in: {secs}s", True, (255, 255, 255))
-                        cd_rect = cd_txt.get_rect(center=(self.app.WIDTH//2, preview_y + target_h // 2))
+                        # place countdown near the top of the preview box for visibility
+                        cd_rect = cd_txt.get_rect(center=(self.app.WIDTH//2, box_top + 18))
                         self.screen.blit(cd_txt, cd_rect)
                 except Exception:
                     pass
 
-                # debug status label for guide/outline
-                status = f"Guide:{'Y' if self.guide_surf else 'N'} Outline:{'Y' if getattr(self, 'guide_outline_surf', None) else 'N'}"
-                stat_surf = self.font.render(status, True, (255, 200, 0))
-                stat_rect = stat_surf.get_rect(midtop=(self.app.WIDTH//2, preview_y + target_h + 44))
-                self.screen.blit(stat_surf, stat_rect)
+                # status text intentionally omitted
             except Exception as e:
                 print('Preview render error:', e)
 
@@ -426,7 +407,7 @@ class AvatarCreateScene:
                             _cv2.imwrite(tpose_path, rgba)
                             used_guide_cutout = True
                         except Exception as e_gc:
-                            print("Guide-based cutout failed:", e_gc)
+                            print("Mask-based cutout failed:", e_gc)
                     if not used_guide_cutout:
                         # fallback: simple resize without alpha
                         try:
