@@ -478,6 +478,29 @@ class AvatarCreateScene:
             except Exception as e:
                 print('Preview render error:', e)
 
+        # If not actively capturing but we have a saved preview (Player1), draw it
+        if not self.capturing and getattr(self, 'show_preview', False) and getattr(self, 'preview_surf', None):
+            try:
+                pv = self.preview_surf
+                pw, ph = pv.get_size()
+                max_w = int(self.app.WIDTH * 0.5)
+                if pw > max_w:
+                    scale = max_w / pw
+                    new_w = int(pw * scale)
+                    new_h = int(ph * scale)
+                    pv = pygame.transform.smoothscale(pv, (new_w, new_h))
+                pv_x = (self.app.WIDTH - pv.get_width()) // 2
+                # place preview above center area
+                pv_y = max(40, (self.app.HEIGHT // 2) - pv.get_height() - 60)
+                bg = pygame.Surface((pv.get_width()+8, pv.get_height()+8))
+                bg.fill((20,20,20))
+                self.screen.blit(bg, (pv_x-4, pv_y-4))
+                self.screen.blit(pv, (pv_x, pv_y))
+                hint = self.font.render('確認角色後按 Next 前往 Player2 拍照', True, (230,230,230))
+                self.screen.blit(hint, ((self.app.WIDTH - hint.get_width())//2, pv_y + pv.get_height() + 8))
+            except Exception:
+                pass
+
     def _stop_capture(self):
         # helper to safely stop capture and release resources
         self.capturing = False
