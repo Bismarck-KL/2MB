@@ -165,5 +165,30 @@ class Player:
             self.is_hurt = False
         threading.Thread(target=reset_hurt, daemon=True).start()
 
+    def set_animation_image(self, image_path: str) -> bool:
+        """Replace or set the animated character image at runtime.
+
+        Returns True on success, False otherwise.
+        """
+        try:
+            if not image_path or not os.path.exists(image_path):
+                print(f"set_animation_image: image not found: {image_path}")
+                return False
+            # create a new AnimatedCharacter using the same options as __init__
+            flip = (self.player_id == 1)
+            self.animated_char = AnimatedCharacter(
+                image_path=image_path,
+                scale=0.5,
+                enable_pixelate=True,
+                flip_horizontal=flip,
+            )
+            self.animated_char.set_position(int(self.pos.x), int(self.pos.y))
+            self.animated_char.set_pose('ready')
+            self.use_animation = True
+            return True
+        except Exception as e:
+            print(f"Failed to set animation image: {e}")
+            return False
+
 
 __all__ = ["Player"]
