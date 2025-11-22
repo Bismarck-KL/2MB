@@ -26,7 +26,8 @@ class Player:
     ) -> None:
         self.app = app
         self.screen = app.screen
-        w, h = (200, 200)
+        # Increase default player size by 50%
+        w, h = (300, 300)
 
         # player 0, bottom left; player 1, bottom right
         start_x = (50 + w) if player_id == 0 else app.WIDTH - 50 - w
@@ -51,9 +52,10 @@ class Player:
                 if os.path.exists(anim_path):
                     # Player 1 面向右邊，Player 2 面向左邊（翻轉）
                     flip = (player_id == 1)
+                    # increase animation scale by 50% (0.5 -> 0.75)
                     self.animated_char = AnimatedCharacter(
                         image_path=anim_path,
-                        scale=0.5,
+                        scale=0.75,
                         enable_pixelate=True,
                         flip_horizontal=flip
                     )
