@@ -15,6 +15,7 @@ from typing import Dict, Optional, Callable
 
 from .game_image_loader import GameImageLoader
 from .game_sound_loader import BackgroundMusicLoader
+import os
 
 
 class ResourceManager:
@@ -70,6 +71,33 @@ class ResourceManager:
     # Accessors
     def get_image(self, key: str):
         return self.image_loader.get(key)
+
+    def get_image_by_path(self, path: str):
+        """Return a loaded pygame.Surface for a filesystem path if that path
+        appears in the manager's image map. This helps callers that only know
+        the path (not the resource key) to reuse already-loaded surfaces.
+
+        Path matching is done by normalizing paths and joining with the
+        configured image_base_dir when the stored path is relative.
+        """
+        if not path:
+            return None
+
+        # normalize requested path
+        try:
+            req = os.path.normpath(path)
+        except Exception:
+            req = path
+
+        for key, rel in self.images_map.items():
+            try:
+                full = rel if os.path.isabs(rel) or not self.image_base_dir else os.path.join(self.image_base_dir, rel)
+                if os.path.normpath(full) == req:
+                    return self.image_loader.get(key)
+            except Exception:
+                continue
+
+        return None
 
     # Simple sound cache for short sound effects (pygame.mixer.Sound)
     # This is intentionally minimal: it synchronously loads the sound the
