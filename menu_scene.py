@@ -112,7 +112,7 @@ class MenuScene:
 
     def on_exit(self):
         try:
-                if pygame.mixer.get_init():
+            if pygame.mixer.get_init():
                 pygame.mixer.music.fadeout(500)
         except Exception:
             pass
