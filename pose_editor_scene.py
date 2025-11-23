@@ -96,6 +96,28 @@ class PoseEditorScene:
         self.input_text = ''
         self.message = ''
 
+        # Pixelation UI sliders
+        # pixel size: integer range [2, 32]
+        self.pixel_min = 2
+        self.pixel_max = 32
+        self.pixel_size = int(getattr(self.char, 'pixel_size', 4))
+        # color palette size: integer range [2, 32]
+        self.color_min = 2
+        self.color_max = 32
+        self.num_colors = int(getattr(self.char, 'num_colors', 16))
+
+        # slider UI geometry (relative positions)
+        self.slider_x = 300
+        self.slider_y = 220
+        self.slider_w = 300
+        self.slider_h = 18
+        self.pixel_slider_rect = pygame.Rect(self.slider_x, self.slider_y, self.slider_w, self.slider_h)
+        self.color_slider_rect = pygame.Rect(self.slider_x, self.slider_y + 48, self.slider_w, self.slider_h)
+
+        # dragging state
+        self._drag_pixel = False
+        self._drag_color = False
+
     def on_enter(self):
         # ensure poses are loaded
         try:
@@ -244,6 +266,27 @@ class PoseEditorScene:
                 # open save name input mode
                 self.input_mode = True
                 self.input_text = ''
+        # mouse slider events
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.pixel_slider_rect.collidepoint(event.pos):
+                self._drag_pixel = True
+                # update value immediately
+                self._set_pixel_from_pos(event.pos[0])
+            elif self.color_slider_rect.collidepoint(event.pos):
+                self._drag_color = True
+                self._set_color_from_pos(event.pos[0])
+
+        if event.type == pygame.MOUSEMOTION:
+            if self._drag_pixel:
+                self._set_pixel_from_pos(event.pos[0])
+            if self._drag_color:
+                self._set_color_from_pos(event.pos[0])
+
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self._drag_pixel:
+                self._drag_pixel = False
+            if self._drag_color:
+                self._drag_color = False
         except Exception:
             # fallback: ensure character updates so UI stays responsive
             try:
@@ -321,6 +364,30 @@ class PoseEditorScene:
             m = self.font.render(self.message, True, (255,200,120))
             self.screen.blit(m, (info_x, info_y+160))
 
+        # draw pixelation sliders
+        try:
+            mx, my = pygame.mouse.get_pos()
+            # track
+            pygame.draw.rect(self.screen, (80, 80, 80), self.pixel_slider_rect, border_radius=6)
+            pygame.draw.rect(self.screen, (60, 60, 60), self.color_slider_rect, border_radius=6)
+
+            # knob positions
+            def knob_x_for(value, vmin, vmax):
+                t = (value - vmin) / max(1, (vmax - vmin))
+                return int(self.pixel_slider_rect.x + t * self.pixel_slider_rect.width)
+
+            px = knob_x_for(self.pixel_size, self.pixel_min, self.pixel_max)
+            cx = knob_x_for(self.num_colors, self.color_min, self.color_max)
+
+            pygame.draw.circle(self.screen, (220, 220, 220), (px, self.pixel_slider_rect.centery), 8)
+            pygame.draw.circle(self.screen, (220, 220, 220), (cx, self.color_slider_rect.centery), 8)
+
+            # labels
+            self.screen.blit(self.font.render(f"Pixel size: {self.pixel_size}", True, (220,220,220)), (self.slider_x, self.slider_y - 22))
+            self.screen.blit(self.font.render(f"Colors: {self.num_colors}", True, (220,220,220)), (self.slider_x, self.slider_y + 26))
+        except Exception:
+            pass
+
     def update(self, dt: float):
         """Update loop called from Application; keep character and timers in sync."""
         # update animated character (passes dt to controller)
@@ -360,6 +427,40 @@ class PoseEditorScene:
             part = self.char.skeleton.parts[self.selected_part]
             pos = getattr(part, 'local_position', [0,0])
             part.local_position = [pos[0] + dx, pos[1] + dy]
+        except Exception:
+            pass
+
+    def _set_pixel_from_pos(self, x_coord: int):
+        """Set pixel_size from mouse x coordinate on slider."""
+        try:
+            rel = (x_coord - self.pixel_slider_rect.x) / max(1, self.pixel_slider_rect.width)
+            rel = max(0.0, min(1.0, rel))
+            val = int(round(self.pixel_min + rel * (self.pixel_max - self.pixel_min)))
+            self.pixel_size = val
+            try:
+                self.char.set_pixel_size(self.pixel_size)
+            except Exception:
+                self.char.pixel_size = self.pixel_size
+            # show message briefly
+            self.message = f"Pixel size: {self.pixel_size}"
+            self._message_timer = 1.8
+        except Exception:
+            pass
+
+    def _set_color_from_pos(self, x_coord: int):
+        """Set num_colors from mouse x coordinate on slider."""
+        try:
+            rel = (x_coord - self.color_slider_rect.x) / max(1, self.color_slider_rect.width)
+            rel = max(0.0, min(1.0, rel))
+            val = int(round(self.color_min + rel * (self.color_max - self.color_min)))
+            self.num_colors = val
+            try:
+                self.char.set_color_palette(self.num_colors)
+            except Exception:
+                self.char.num_colors = self.num_colors
+            # show message briefly
+            self.message = f"Colors: {self.num_colors}"
+            self._message_timer = 1.8
         except Exception:
             pass
 
