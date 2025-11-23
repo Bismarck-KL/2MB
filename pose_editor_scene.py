@@ -119,6 +119,47 @@ class PoseEditorScene:
             ctrl.transition_progress = 1.0
         except Exception:
             pass
+        # play menu/background music for this scene
+        try:
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+            except Exception:
+                try:
+                    pygame.mixer.init()
+                except Exception:
+                    pass
+
+            music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
+            if os.path.exists(music_path):
+                try:
+                    pygame.mixer.music.load(music_path)
+                    pygame.mixer.music.set_volume(0.5)
+                    pygame.mixer.music.play(-1)
+                except Exception as e:
+                    print(f"PoseEditorScene: failed to play music '{music_path}':", e)
+            else:
+                print(f"PoseEditorScene: music file not found: {music_path}")
+        except Exception:
+            pass
+
+    def on_exit(self):
+        # restore controller auto_return when exiting editor
+        try:
+            ctrl = self.char.animation_controller
+            if self._editor_prev_auto_return is not None:
+                try:
+                    ctrl.auto_return = self._editor_prev_auto_return
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # stop music when leaving the editor
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
+        except Exception:
+            pass
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
