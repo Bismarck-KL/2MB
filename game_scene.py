@@ -1,4 +1,5 @@
 import pygame
+import os
 
 from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, HEALTH, HEALTH_BG
 from utils.ui import Button, draw_health_bar
@@ -119,10 +120,42 @@ class GameScene:
         except Exception as e:
             print("GameScene: failed to initialize mediapipe capture:", e)
 
+        # Play background music for the game scene (looped)
+        try:
+            # ensure mixer is initialized
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+            except Exception:
+                # try to initialize with default params
+                try:
+                    pygame.mixer.init()
+                except Exception:
+                    pass
+
+            music_path = os.path.join('assets', 'sounds', 'fighting scene_bgm.mp3')
+            if os.path.exists(music_path):
+                try:
+                    pygame.mixer.music.load(music_path)
+                    pygame.mixer.music.set_volume(0.6)
+                    pygame.mixer.music.play(-1)  # loop indefinitely
+                except Exception as e:
+                    print(f"GameScene: failed to play music '{music_path}':", e)
+            else:
+                print(f"GameScene: music file not found: {music_path}")
+        except Exception:
+            pass
+
     def on_exit(self):
         """Called when leaving the scene. Stop the mediapipe capture."""
         try:
             stop_mediapipe_capture()
+        except Exception:
+            pass
+        # stop music when leaving the game scene
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
         except Exception:
             pass
 
