@@ -188,7 +188,9 @@ class Poses:
         
         # Attempt to load poses_all.json and merge with any individual pose_*.json
         poses = {}
-        json_path = 'poses_all.json'
+        
+        json_path = os.path.join("assets","poses", "poses_all.json")
+
         if os.path.exists(json_path):
             try:
                 with open(json_path, 'r', encoding='utf-8') as f:
