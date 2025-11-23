@@ -341,13 +341,9 @@ class GameScene:
     def check_win_condition(self):
         """檢查勝負條件"""
         if self.player_1.health_points <= 0:
-            if not self.game_over:
-                self._play_win_sound()
             self.game_over = True
             self.winner = 2
         elif self.player_2.health_points <= 0:
-            if not self.game_over:
-                self._play_win_sound()
             self.game_over = True
             self.winner = 1
 
@@ -370,7 +366,7 @@ class GameScene:
                 win_sfx = pygame.mixer.Sound(win_path)
                 win_sfx.set_volume(1.0)
                 print(f"[SFX] Win sound volume: {win_sfx.get_volume()}")
-                # 嘗試分配一個空閒 channel
+                # 只播放勝利音效，不處理 BGM
                 channel_id = pygame.mixer.find_channel()
                 print(f"[SFX] Allocated channel id: {channel_id}")
                 if channel_id:
