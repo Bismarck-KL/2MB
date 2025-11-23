@@ -14,7 +14,7 @@ from pose_editor_scene import PoseEditorScene
 
 
 class Application:
-    def __init__(self, width=800, height=600):
+    def __init__(self, width=1600, height=1200):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
@@ -112,7 +112,7 @@ class Application:
         # main loop
         print('[DEBUG] Application.run: start main loop')
         while self.running:
-            print(f'[DEBUG] Application.run: self.running={self.running}')
+            # print(f'[DEBUG] Application.run: self.running={self.running}')
             dt = self.clock.tick(60) / 1000.0
 
             for event in pygame.event.get():
@@ -124,7 +124,7 @@ class Application:
                     self.running = False
                 else:
                     if self.scene:
-                        print(f'[DEBUG] Application.run: passing event {event} to scene.handle_event')
+                        # print(f'[DEBUG] Application.run: passing event {event} to scene.handle_event')
                         self.scene.handle_event(event)
 
             # 只在 running 為 True 時更新場景
