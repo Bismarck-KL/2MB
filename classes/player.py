@@ -59,6 +59,12 @@ class Player:
                         enable_pixelate=True,
                         flip_horizontal=flip
                     )
+                    # provide shared ResourceManager from app so images/sfx can be reused
+                    try:
+                        if hasattr(app, 'res_mgr') and app.res_mgr:
+                            self.animated_char.set_resource_manager(app.res_mgr)
+                    except Exception:
+                        pass
                     self.animated_char.set_position(
                         int(self.pos.x), int(self.pos.y))
                     # 設置初始姿勢為ready
