@@ -138,7 +138,8 @@ class GameScene:
                 try:
                     pygame.mixer.music.load(music_path)
                     pygame.mixer.music.set_volume(0.6)
-                    pygame.mixer.music.play(-1)  # loop indefinitely
+                    # fade in over 1000ms
+                    pygame.mixer.music.play(-1, 0.0, 1000)  # loop indefinitely
                 except Exception as e:
                     print(f"GameScene: failed to play music '{music_path}':", e)
             else:
@@ -152,10 +153,10 @@ class GameScene:
             stop_mediapipe_capture()
         except Exception:
             pass
-        # stop music when leaving the game scene
+        # stop music when leaving the game scene (fade out)
         try:
             if pygame.mixer.get_init():
-                pygame.mixer.music.stop()
+                pygame.mixer.music.fadeout(1000)
         except Exception:
             pass
 

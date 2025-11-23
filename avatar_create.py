@@ -111,7 +111,8 @@ class AvatarCreateScene:
                 try:
                     pygame.mixer.music.load(music_path)
                     pygame.mixer.music.set_volume(0.5)
-                    pygame.mixer.music.play(-1)
+                    # fade in over 1000ms
+                    pygame.mixer.music.play(-1, 0.0, 1000)
                 except Exception as e:
                     print(f"AvatarCreateScene: failed to play music '{music_path}':", e)
             else:
@@ -122,7 +123,7 @@ class AvatarCreateScene:
     def on_exit(self):
         try:
             if pygame.mixer.get_init():
-                pygame.mixer.music.stop()
+                pygame.mixer.music.fadeout(1000)
         except Exception:
             pass
 
