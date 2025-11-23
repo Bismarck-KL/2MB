@@ -104,19 +104,25 @@ class Application:
         self.change_scene("MenuScene")
 
         # main loop
+        print('[DEBUG] Application.run: start main loop')
         while self.running:
+            print(f'[DEBUG] Application.run: self.running={self.running}')
             dt = self.clock.tick(60) / 1000.0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    print('[DEBUG] Application.run: received pygame.QUIT')
                     self.running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    print('[DEBUG] Application.run: received ESC')
                     self.running = False
                 else:
                     if self.scene:
+                        print(f'[DEBUG] Application.run: passing event {event} to scene.handle_event')
                         self.scene.handle_event(event)
 
-            if self.scene:
+            # 只在 running 為 True 時更新場景
+            if self.running and self.scene:
                 self.scene.update(dt)
 
             if self.scene:
