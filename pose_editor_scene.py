@@ -5,7 +5,7 @@ import json
 from utils.color import BG, TITLE
 from utils.ui import Button
 from classes.animated_character import AnimatedCharacter
-from utils.settings import load_settings, save_settings
+
 
 
 class PoseEditorScene:
@@ -32,8 +32,6 @@ class PoseEditorScene:
         # UI buttons
         self.back_button = Button(pygame.Rect(20, 20, 140, 48), text="Back", font=self.font)
         self.save_button = Button(pygame.Rect(self.app.WIDTH - 160, 20, 140, 48), text="Save Pose", font=self.font)
-        # Apply global settings (persist and reload scene)
-        self.apply_button = Button(pygame.Rect(self.app.WIDTH - 320, 20, 140, 48), text="Apply Global", font=self.font)
 
         # create an AnimatedCharacter for live preview
         # try to use generated tpose if available
@@ -99,27 +97,10 @@ class PoseEditorScene:
         self.input_text = ''
         self.message = ''
 
-        # Pixelation UI sliders
-        # pixel size: integer range [2, 32]
-        self.pixel_min = 2
-        self.pixel_max = 32
-        self.pixel_size = int(getattr(self.char, 'pixel_size', 4))
-        # color palette size: integer range [2, 32]
-        self.color_min = 2
-        self.color_max = 32
-        self.num_colors = int(getattr(self.char, 'num_colors', 16))
-
-        # slider UI geometry (relative positions)
-        self.slider_x = 300
-        self.slider_y = 220
-        self.slider_w = 300
-        self.slider_h = 18
-        self.pixel_slider_rect = pygame.Rect(self.slider_x, self.slider_y, self.slider_w, self.slider_h)
-        self.color_slider_rect = pygame.Rect(self.slider_x, self.slider_y + 48, self.slider_w, self.slider_h)
-
-        # dragging state
-        self._drag_pixel = False
-        self._drag_color = False
+        # Pixelation is fixed (disabled adjustments). Use forced defaults.
+        # PIXEL = 6, COLORS = 32
+        self.pixel_size = 6
+        self.num_colors = 32
 
     def on_enter(self):
         # ensure poses are loaded
@@ -269,48 +250,8 @@ class PoseEditorScene:
                 # open save name input mode
                 self.input_mode = True
                 self.input_text = ''
-            if self.apply_button.handle_event(event):
-                # persist both settings and reload current scene so others pick up
-                try:
-                    save_settings({"pixel_size": self.pixel_size, "num_colors": self.num_colors})
-                except Exception:
-                    pass
-                self.message = "Saved global settings"
-                self._message_timer = 1.8
-                # broadcast to existing AnimatedCharacter instances (no reload)
-                try:
-                    # prefer global registry-based broadcast if available
-                    try:
-                        from classes.animated_character import apply_global_pixel_settings
-                        applied = apply_global_pixel_settings(self.pixel_size, self.num_colors)
-                        self.message = f"Applied to {applied} characters"
-                        self._message_timer = 1.8
-                    except Exception:
-                        # fallback to scene-local broadcast
-                        self._broadcast_settings()
-                except Exception:
-                    pass
             # mouse slider events
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.pixel_slider_rect.collidepoint(event.pos):
-                    self._drag_pixel = True
-                    # update value immediately
-                    self._set_pixel_from_pos(event.pos[0])
-                elif self.color_slider_rect.collidepoint(event.pos):
-                    self._drag_color = True
-                    self._set_color_from_pos(event.pos[0])
-
-            if event.type == pygame.MOUSEMOTION:
-                if self._drag_pixel:
-                    self._set_pixel_from_pos(event.pos[0])
-                if self._drag_color:
-                    self._set_color_from_pos(event.pos[0])
-
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if self._drag_pixel:
-                    self._drag_pixel = False
-                if self._drag_color:
-                    self._drag_color = False
+            # Note: pixel slider input removed (disabled per request)
         except Exception:
             # fallback: ensure character updates so UI stays responsive
             try:
@@ -341,10 +282,9 @@ class PoseEditorScene:
 
         # draw UI
         mouse_pos = pygame.mouse.get_pos()
-        self.back_button.draw(self.screen, mouse_pos)
-        self.save_button.draw(self.screen, mouse_pos)
         try:
-            self.apply_button.draw(self.screen, mouse_pos)
+            self.back_button.draw(self.screen, mouse_pos)
+            self.save_button.draw(self.screen, mouse_pos)
         except Exception:
             pass
 
@@ -392,27 +332,10 @@ class PoseEditorScene:
             m = self.font.render(self.message, True, (255,200,120))
             self.screen.blit(m, (info_x, info_y+160))
 
-        # draw pixelation sliders
+        # Pixel controls removed — show fixed values
         try:
-            mx, my = pygame.mouse.get_pos()
-            # track
-            pygame.draw.rect(self.screen, (80, 80, 80), self.pixel_slider_rect, border_radius=6)
-            pygame.draw.rect(self.screen, (60, 60, 60), self.color_slider_rect, border_radius=6)
-
-            # knob positions
-            def knob_x_for(value, vmin, vmax):
-                t = (value - vmin) / max(1, (vmax - vmin))
-                return int(self.pixel_slider_rect.x + t * self.pixel_slider_rect.width)
-
-            px = knob_x_for(self.pixel_size, self.pixel_min, self.pixel_max)
-            cx = knob_x_for(self.num_colors, self.color_min, self.color_max)
-
-            pygame.draw.circle(self.screen, (220, 220, 220), (px, self.pixel_slider_rect.centery), 8)
-            pygame.draw.circle(self.screen, (220, 220, 220), (cx, self.color_slider_rect.centery), 8)
-
-            # labels
-            self.screen.blit(self.font.render(f"Pixel size: {self.pixel_size}", True, (220,220,220)), (self.slider_x, self.slider_y - 22))
-            self.screen.blit(self.font.render(f"Colors: {self.num_colors}", True, (220,220,220)), (self.slider_x, self.slider_y + 26))
+            self.screen.blit(self.font.render(f"Pixel size (fixed): {self.pixel_size}", True, (220,220,220)), (40, self.app.HEIGHT - 200))
+            self.screen.blit(self.font.render(f"Colors (fixed): {self.num_colors}", True, (220,220,220)), (40, self.app.HEIGHT - 170))
         except Exception:
             pass
 
@@ -472,17 +395,6 @@ class PoseEditorScene:
             # show message briefly
             self.message = f"Pixel size: {self.pixel_size}"
             self._message_timer = 1.8
-            # persist globally
-            try:
-                save_settings({"pixel_size": self.pixel_size})
-            except Exception:
-                pass
-            # persist globally
-            try:
-                from utils.settings import save_settings
-                save_settings({'pixel_size': self.pixel_size})
-            except Exception:
-                pass
         except Exception:
             pass
 
@@ -500,17 +412,6 @@ class PoseEditorScene:
             # show message briefly
             self.message = f"Colors: {self.num_colors}"
             self._message_timer = 1.8
-            # persist globally
-            try:
-                save_settings({"num_colors": self.num_colors})
-            except Exception:
-                pass
-            # persist globally
-            try:
-                from utils.settings import save_settings
-                save_settings({'num_colors': self.num_colors})
-            except Exception:
-                pass
         except Exception:
             pass
 
@@ -595,6 +496,7 @@ class PoseEditorScene:
         try:
             scene = self.app.scene
             applied = 0
+            applied_items = []
 
             def apply_to_obj(obj):
                 nonlocal applied
@@ -609,6 +511,10 @@ class PoseEditorScene:
                             obj.set_color_palette(self.num_colors)
                         except Exception:
                             obj.num_colors = self.num_colors
+                        try:
+                            applied_items.append(repr(obj))
+                        except Exception:
+                            applied_items.append(str(type(obj)))
                         applied += 1
                         return True
                 except Exception:
@@ -645,9 +551,14 @@ class PoseEditorScene:
                 apply_to_obj(self.char)
             except Exception:
                 pass
-
             self.message = f"Applied to {applied} characters"
             self._message_timer = 1.8
+            try:
+                print(f"[PoseEditor._broadcast_settings] applied to {applied} objects: {applied_items}")
+            except Exception:
+                pass
+            return applied
         except Exception:
             self.message = "Apply failed"
             self._message_timer = 1.8
+            return 0

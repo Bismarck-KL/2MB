@@ -38,10 +38,11 @@ class AnimatedCharacter:
         self.position = [0, 0]  # 世界位置
         self.flip_horizontal = flip_horizontal
 
-        # 像素化設置
+        # 像素化設置 - 強制使用固定值
         self.enable_pixelate = enable_pixelate
-        self.pixel_size = 4
-        self.num_colors = 16
+        # 硬性設定：PIXEL = 6, COLOR = 32
+        self.pixel_size = 6
+        self.num_colors = 32
 
         # 用於渲染的離屏surface
         self.render_surface = None
@@ -176,38 +177,21 @@ class AnimatedCharacter:
         # register instance in global weak registry so tools can broadcast updates
         try:
             GLOBAL_ANIM_CHAR_REGISTRY.add(self)
+            try:
+                print(f"[AnimatedCharacter] Registered instance: {repr(self)}")
+            except Exception:
+                print("[AnimatedCharacter] Registered instance")
         except Exception:
             pass
 
-        # apply global settings (pixelation) if available
-        try:
-            settings = load_settings()
-            self.pixel_size = int(settings.get('pixel_size', self.pixel_size))
-            self.num_colors = int(settings.get('num_colors', self.num_colors))
-        except Exception:
-            pass
+        # NOTE: settings.json is intentionally ignored so pixel settings
+        # remain fixed to PIXEL=6, COLOR=32 as requested.
 
         # 應用初始姿勢並更新骨骼
         self.animation_controller.set_pose('ready', immediate=True)
         self.skeleton.update()
 
-        # Apply global pixelation settings (if present)
-        try:
-            # lazy import to avoid circular deps at module import time
-            from utils.settings import load_settings
-            settings = load_settings()
-            ps = int(settings.get('pixel_size', self.pixel_size))
-            nc = int(settings.get('num_colors', self.num_colors))
-            try:
-                self.set_pixel_size(ps)
-            except Exception:
-                self.pixel_size = ps
-            try:
-                self.set_color_palette(nc)
-            except Exception:
-                self.num_colors = nc
-        except Exception:
-            pass
+        # Intentionally not applying persisted settings to enforce fixed pixel values.
 
     def set_position(self, x, y):
         """設置角色在遊戲世界中的位置"""
@@ -446,10 +430,18 @@ def apply_global_pixel_settings(pixel_size: int = None, num_colors: int = None):
     This is a convenience used by editor tools to update existing characters
     without recreating scenes.
     """
+    print(f"[apply_global_pixel_settings] called with pixel_size={pixel_size}, num_colors={num_colors}")
     applied = 0
     try:
-        for inst in list(GLOBAL_ANIM_CHAR_REGISTRY):
+        regs = list(GLOBAL_ANIM_CHAR_REGISTRY)
+        print(f"[apply_global_pixel_settings] registry contains {len(regs)} entries")
+        for inst in regs:
             try:
+                try:
+                    ident = repr(inst)
+                except Exception:
+                    ident = str(type(inst))
+                print(f"[apply_global_pixel_settings] applying to instance: {ident}")
                 if pixel_size is not None:
                     try:
                         inst.set_pixel_size(int(pixel_size))
@@ -461,8 +453,14 @@ def apply_global_pixel_settings(pixel_size: int = None, num_colors: int = None):
                     except Exception:
                         inst.num_colors = int(num_colors)
                 applied += 1
-            except Exception:
+            except Exception as e:
+                print(f"[apply_global_pixel_settings] error applying to instance: {e}")
                 pass
+    except Exception as e:
+        print(f"[apply_global_pixel_settings] error iterating registry: {e}")
+        pass
+    try:
+        print(f"[apply_global_pixel_settings] applied to {applied} instances")
     except Exception:
         pass
     return applied
