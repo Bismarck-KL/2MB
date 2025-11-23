@@ -32,6 +32,8 @@ class PoseEditorScene:
         # UI buttons
         self.back_button = Button(pygame.Rect(20, 20, 140, 48), text="Back", font=self.font)
         self.save_button = Button(pygame.Rect(self.app.WIDTH - 160, 20, 140, 48), text="Save Pose", font=self.font)
+        # Apply global settings (persist and reload scene)
+        self.apply_button = Button(pygame.Rect(self.app.WIDTH - 320, 20, 140, 48), text="Apply Global", font=self.font)
 
         # create an AnimatedCharacter for live preview
         # try to use generated tpose if available
@@ -267,6 +269,21 @@ class PoseEditorScene:
                 # open save name input mode
                 self.input_mode = True
                 self.input_text = ''
+            if self.apply_button.handle_event(event):
+                # persist both settings and reload current scene so others pick up
+                try:
+                    save_settings({"pixel_size": self.pixel_size, "num_colors": self.num_colors})
+                except Exception:
+                    pass
+                self.message = "Saved global settings"
+                self._message_timer = 1.8
+                # reload current scene to apply globally
+                try:
+                    cur_name = self.app.scene.__class__.__name__
+                    self.app.change_scene(cur_name)
+                    return
+                except Exception:
+                    pass
             # mouse slider events
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.pixel_slider_rect.collidepoint(event.pos):
