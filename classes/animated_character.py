@@ -4,6 +4,7 @@ Integrates the skeletal animation system into the 2MB game
 """
 
 import pygame
+import os
 from collections import Counter
 import weakref
 
@@ -109,8 +110,27 @@ class AnimatedCharacter:
 
     def _load_and_setup_skeleton(self, image_path):
         """載入圖片並建立骨骼系統"""
-        # 載入圖片
-        original_image = pygame.image.load(image_path).convert_alpha()
+        # 載入圖片 - prefer ResourceManager-provided surface when available
+        original_image = None
+        try:
+            if self.res_mgr:
+                try:
+                    original_image = self.res_mgr.get_image_by_path(image_path)
+                except Exception:
+                    original_image = None
+        except Exception:
+            original_image = None
+
+        if original_image is None:
+            try:
+                original_image = pygame.image.load(image_path)
+                try:
+                    original_image = original_image.convert_alpha()
+                except Exception:
+                    original_image = original_image.convert()
+            except Exception:
+                # loading failed; raise so callers can handle or fallback
+                raise
 
         # 獲取身體部位定義 - 自動根據圖片路徑選擇配置
         body_parts_def = BodyPartsConfig.from_image_path(image_path)
