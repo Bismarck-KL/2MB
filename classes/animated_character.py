@@ -276,6 +276,39 @@ class AnimatedCharacter:
         center_x = base_size[0] // 2
         center_y = base_size[1] // 2
 
+        # --- 根據腳距離動態繪製影子 ---
+        left_shin = self.skeleton.get_part('left_shin') if hasattr(self.skeleton, 'get_part') else None
+        right_shin = self.skeleton.get_part('right_shin') if hasattr(self.skeleton, 'get_part') else None
+        if left_shin and right_shin:
+            lx, ly = left_shin.world_position
+            rx, ry = right_shin.world_position
+            foot_dist = abs(rx - lx)
+            shadow_width = max(int(foot_dist * 1.2), int(80 * self.scale))
+            shadow_height = int(40 * self.scale)
+            # 轉換到 render_surface 座標
+            root_x, root_y = self.skeleton.root.world_position
+            avg_x = (lx + rx) / 2
+            avg_y = (ly + ry) / 2
+            rel_x = center_x + (avg_x - root_x) - shadow_width // 2
+            rel_y = center_y + (avg_y - root_y) - shadow_height // 2
+            rel_y -= 15  # 向上偏移 15 pixel
+            # fallback: 如果影子超出 render surface，則用預設位置
+            if not (0 <= rel_x <= self.render_surface.get_width() - shadow_width and 0 <= rel_y <= self.render_surface.get_height() - shadow_height):
+                rel_x = center_x - shadow_width // 2
+                rel_y = center_y + 320 - shadow_height // 2
+                rel_y -= 15  # 向上偏移 15 pixel
+            shadow_x = int(rel_x)
+            shadow_y = int(rel_y)
+        else:
+            shadow_width = int(120 * self.scale)
+            shadow_height = int(40 * self.scale)
+            shadow_x = center_x - shadow_width // 2
+            shadow_y = center_y + 320 - shadow_height // 2
+        shadow_color = (0, 0, 0, 80)  # 半透明黑色
+        shadow_surface = pygame.Surface((shadow_width, shadow_height), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_surface, shadow_color, (0, 0, shadow_width, shadow_height))
+        self.render_surface.blit(shadow_surface, (shadow_x, shadow_y))
+
         # 保存原始位置
         original_offset = self.skeleton.root_offset[:]
         original_world_pos = self.skeleton.root.world_position[:]

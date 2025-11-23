@@ -125,11 +125,14 @@ class GameScene:
             # ensure mixer is initialized
             try:
                 if not pygame.mixer.get_init():
-                    pygame.mixer.init()
+                    print("[SFX] Initializing mixer with 16 channels...")
+                    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                    pygame.mixer.set_num_channels(16)
             except Exception:
                 # try to initialize with default params
                 try:
                     pygame.mixer.init()
+                    pygame.mixer.set_num_channels(16)
                 except Exception:
                     pass
 
@@ -161,20 +164,24 @@ class GameScene:
             pass
 
     def handle_event(self, event):
+        print(f'[DEBUG] GameScene.handle_event: event={event}, game_over={self.game_over}')
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            # return to menu
+            print('[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene')
             self.app.change_scene("MenuScene")
 
         # back button click
         if self.back_button.handle_event(event):
+            print('[DEBUG] GameScene.handle_event: Back button clicked, switching to MenuScene')
             self.app.change_scene("MenuScene")
         
         # 遊戲結束後按空白鍵重新開始
         if self.game_over and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            print('[DEBUG] GameScene.handle_event: SPACE pressed, restarting game')
             self.reset_game()
 
     def update(self, dt):
         if self.game_over:
+            # 遊戲結束時只顯示結果，不自動退出
             return
         
         # 更新回合時間
@@ -334,11 +341,45 @@ class GameScene:
     def check_win_condition(self):
         """檢查勝負條件"""
         if self.player_1.health_points <= 0:
+            if not self.game_over:
+                self._play_win_sound()
             self.game_over = True
             self.winner = 2
         elif self.player_2.health_points <= 0:
+            if not self.game_over:
+                self._play_win_sound()
             self.game_over = True
             self.winner = 1
+
+    def _play_win_sound(self):
+        try:
+            print("[SFX] _play_win_sound called")
+            # 確保 mixer 已初始化
+            if not pygame.mixer.get_init():
+                print("[SFX] Mixer not initialized, initializing...")
+                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                pygame.mixer.set_num_channels(16)
+            print(f"[SFX] Mixer get_init: {pygame.mixer.get_init()}")
+            print(f"[SFX] Mixer music busy: {pygame.mixer.music.get_busy()}")
+            print(f"[SFX] Mixer num_channels: {pygame.mixer.get_num_channels()}")
+            if not hasattr(self, '_win_sound_played') or not self._win_sound_played:
+                win_path = 'assets/sounds/you win.wav'
+                print(f"[SFX] Loading win sound: {win_path}")
+                if not os.path.exists(win_path):
+                    print(f"[SFX] Win sound file not found: {win_path}")
+                win_sfx = pygame.mixer.Sound(win_path)
+                win_sfx.set_volume(1.0)
+                print(f"[SFX] Win sound volume: {win_sfx.get_volume()}")
+                # 嘗試分配一個空閒 channel
+                channel_id = pygame.mixer.find_channel()
+                print(f"[SFX] Allocated channel id: {channel_id}")
+                if channel_id:
+                    channel_id.play(win_sfx)
+                else:
+                    print("[SFX] No free channel for win sound!")
+                self._win_sound_played = True
+        except Exception as e:
+            print(f"[SFX] Win sound error: {e}")
     
     def end_game_by_time(self):
         """時間到，血量多的獲勝"""
@@ -365,6 +406,7 @@ class GameScene:
         self.round_time = 99
         self.game_over = False
         self.winner = None
+        self._win_sound_played = False
         if hasattr(self.player_1, 'attack_cooldown'):
             self.player_1.attack_cooldown = 0
         if hasattr(self.player_2, 'attack_cooldown'):
