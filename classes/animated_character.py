@@ -47,20 +47,64 @@ class AnimatedCharacter:
         self.render_surface = None
         self.final_surface = None
 
-        # 預載入動作聲效
-        self.sfx = {
-            'punch': self._load_sound('assets/sounds/punch sfx.mp3'),
-            'kick': self._load_sound('assets/sounds/kick sfx.mp3'),
-            'jump': self._load_sound('assets/sounds/jump sfx.mp3'),
-            'hurt': self._load_sound('assets/sounds/hurt sfx.mp3'),
-            'block': self._load_sound('assets/sounds/block sfx.mp3'),
+        # SFX paths and lazy cache. Prefer using an external ResourceManager
+        # when available (passed as `res_mgr`) so sounds are shared and cached.
+        self._sfx_paths = {
+            'punch': 'assets/sounds/punch sfx.mp3',
+            'kick': 'assets/sounds/kick sfx.mp3',
+            'jump': 'assets/sounds/jump sfx.mp3',
+            'hurt': 'assets/sounds/hurt sfx.mp3',
+            'block': 'assets/sounds/block sfx.mp3',
         }
+        self._sfx_cache = {}
+        # optional ResourceManager instance (set when caller passes it)
+        self.res_mgr = None
 
     def _load_sound(self, path):
         try:
             return pygame.mixer.Sound(path)
         except Exception as e:
             print(f"[SFX] Failed to load {path}: {e}")
+            return None
+
+    def set_resource_manager(self, res_mgr):
+        """Optionally provide a ResourceManager instance so this class
+        can ask it for shared sounds via `get_sound(path)`.
+        """
+        try:
+            self.res_mgr = res_mgr
+        except Exception:
+            self.res_mgr = None
+
+    def _get_sfx(self, name):
+        """Return a pygame.mixer.Sound for `name` (lazy, cached).
+
+        If a ResourceManager (`self.res_mgr`) is available, use
+        `res_mgr.get_sound(path)` so sounds are shared across objects.
+        """
+        path = self._sfx_paths.get(name)
+        if not path:
+            return None
+
+        # try resource manager first
+        if self.res_mgr:
+            try:
+                snd = self.res_mgr.get_sound(path)
+                if snd:
+                    return snd
+            except Exception:
+                pass
+
+        # fallback to local cache + load
+        snd = self._sfx_cache.get(name)
+        if snd is not None:
+            return snd
+
+        try:
+            snd = pygame.mixer.Sound(path)
+            self._sfx_cache[name] = snd
+            return snd
+        except Exception:
             return None
 
     def _load_and_setup_skeleton(self, image_path):
@@ -230,10 +274,14 @@ class AnimatedCharacter:
             action_name: 動作名稱
             duration: 動作持續時間（秒）- 目前由AnimationController自動控制
         """
-        # 播放對應聲效
-        snd = self.sfx.get(action_name)
+        # 播放對應聲效（lazy, 使用 ResourceManager 若可用）
+        snd = self._get_sfx(action_name)
         if snd:
-            snd.play()
+            try:
+                snd.play()
+            except Exception:
+                # ignore sound playback errors
+                pass
         self.animation_controller.set_pose(action_name)
 
     def update(self, dt):
