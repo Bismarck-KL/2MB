@@ -266,27 +266,27 @@ class PoseEditorScene:
                 # open save name input mode
                 self.input_mode = True
                 self.input_text = ''
-        # mouse slider events
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.pixel_slider_rect.collidepoint(event.pos):
-                self._drag_pixel = True
-                # update value immediately
-                self._set_pixel_from_pos(event.pos[0])
-            elif self.color_slider_rect.collidepoint(event.pos):
-                self._drag_color = True
-                self._set_color_from_pos(event.pos[0])
+            # mouse slider events
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.pixel_slider_rect.collidepoint(event.pos):
+                    self._drag_pixel = True
+                    # update value immediately
+                    self._set_pixel_from_pos(event.pos[0])
+                elif self.color_slider_rect.collidepoint(event.pos):
+                    self._drag_color = True
+                    self._set_color_from_pos(event.pos[0])
 
-        if event.type == pygame.MOUSEMOTION:
-            if self._drag_pixel:
-                self._set_pixel_from_pos(event.pos[0])
-            if self._drag_color:
-                self._set_color_from_pos(event.pos[0])
+            if event.type == pygame.MOUSEMOTION:
+                if self._drag_pixel:
+                    self._set_pixel_from_pos(event.pos[0])
+                if self._drag_color:
+                    self._set_color_from_pos(event.pos[0])
 
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self._drag_pixel:
-                self._drag_pixel = False
-            if self._drag_color:
-                self._drag_color = False
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self._drag_pixel:
+                    self._drag_pixel = False
+                if self._drag_color:
+                    self._drag_color = False
         except Exception:
             # fallback: ensure character updates so UI stays responsive
             try:
@@ -444,6 +444,12 @@ class PoseEditorScene:
             # show message briefly
             self.message = f"Pixel size: {self.pixel_size}"
             self._message_timer = 1.8
+            # persist globally
+            try:
+                from utils.settings import save_settings
+                save_settings({'pixel_size': self.pixel_size})
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -461,6 +467,12 @@ class PoseEditorScene:
             # show message briefly
             self.message = f"Colors: {self.num_colors}"
             self._message_timer = 1.8
+            # persist globally
+            try:
+                from utils.settings import save_settings
+                save_settings({'num_colors': self.num_colors})
+            except Exception:
+                pass
         except Exception:
             pass
 

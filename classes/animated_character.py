@@ -175,6 +175,24 @@ class AnimatedCharacter:
         self.animation_controller.set_pose('ready', immediate=True)
         self.skeleton.update()
 
+        # Apply global pixelation settings (if present)
+        try:
+            # lazy import to avoid circular deps at module import time
+            from utils.settings import load_settings
+            settings = load_settings()
+            ps = int(settings.get('pixel_size', self.pixel_size))
+            nc = int(settings.get('num_colors', self.num_colors))
+            try:
+                self.set_pixel_size(ps)
+            except Exception:
+                self.pixel_size = ps
+            try:
+                self.set_color_palette(nc)
+            except Exception:
+                self.num_colors = nc
+        except Exception:
+            pass
+
     def set_position(self, x, y):
         """設置角色在遊戲世界中的位置"""
         self.position = [x, y]
