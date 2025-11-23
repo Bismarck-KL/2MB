@@ -71,6 +71,24 @@ class ResourceManager:
     def get_image(self, key: str):
         return self.image_loader.get(key)
 
+    # Simple sound cache for short sound effects (pygame.mixer.Sound)
+    # This is intentionally minimal: it synchronously loads the sound the
+    # first time it is requested and caches the resulting Sound object.
+    # Use `get_sound(path)` with a filesystem path (or a key you choose).
+    def get_sound(self, path: str):
+        if not hasattr(self, '_sfx_cache'):
+            self._sfx_cache = {}
+
+        if path in self._sfx_cache:
+            return self._sfx_cache[path]
+
+        try:
+            snd = __import__('pygame').mixer.Sound(path)
+            self._sfx_cache[path] = snd
+            return snd
+        except Exception:
+            return None
+
     def play_music(self):
         if self.audio_loader:
             self.audio_loader.play()
