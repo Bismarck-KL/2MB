@@ -5,7 +5,16 @@ import math
 import os
 import shutil
 
-from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, NEXT_BASE, NEXT_HOVER
+from utils.color import (
+    BG,
+    TITLE,
+    QUIT_BASE,
+    QUIT_HOVER,
+    NEXT_BASE,
+    NEXT_HOVER,
+    CAPTURE_BASE,
+    CAPTURE_HOVER,
+)
 from utils.ui import Button
 
 
@@ -58,8 +67,8 @@ class AvatarCreateScene:
             self.capture_rect,
             text=f"拍照成為Player{self.current_player}",
             font=self.font,
-            base_color=(120,180,255),
-            hover_color=(80,140,220),
+            base_color=CAPTURE_BASE,
+            hover_color=CAPTURE_HOVER,
         )
 
         # internal capture state
