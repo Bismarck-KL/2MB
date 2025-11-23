@@ -5,6 +5,7 @@ Integrates the skeletal animation system into the 2MB game
 
 import pygame
 from collections import Counter
+import weakref
 
 from .body_parts import BodyParts
 from .skeleton import Skeleton, BodyPart
@@ -171,6 +172,12 @@ class AnimatedCharacter:
 
         # 創建動畫控制器
         self.animation_controller = AnimationController(self.skeleton)
+
+        # register instance in global weak registry so tools can broadcast updates
+        try:
+            GLOBAL_ANIM_CHAR_REGISTRY.add(self)
+        except Exception:
+            pass
 
         # apply global settings (pixelation) if available
         try:
@@ -424,3 +431,37 @@ class AnimatedCharacter:
 
 
 __all__ = ['AnimatedCharacter']
+
+# Global weak registry for live AnimatedCharacter instances
+try:
+    GLOBAL_ANIM_CHAR_REGISTRY = weakref.WeakSet()
+except Exception:
+    GLOBAL_ANIM_CHAR_REGISTRY = set()
+
+
+def apply_global_pixel_settings(pixel_size: int = None, num_colors: int = None):
+    """Apply pixel settings to all live AnimatedCharacter instances.
+
+    This is a convenience used by editor tools to update existing characters
+    without recreating scenes.
+    """
+    applied = 0
+    try:
+        for inst in list(GLOBAL_ANIM_CHAR_REGISTRY):
+            try:
+                if pixel_size is not None:
+                    try:
+                        inst.set_pixel_size(int(pixel_size))
+                    except Exception:
+                        inst.pixel_size = int(pixel_size)
+                if num_colors is not None:
+                    try:
+                        inst.set_color_palette(int(num_colors))
+                    except Exception:
+                        inst.num_colors = int(num_colors)
+                applied += 1
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return applied

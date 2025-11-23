@@ -279,7 +279,15 @@ class PoseEditorScene:
                 self._message_timer = 1.8
                 # broadcast to existing AnimatedCharacter instances (no reload)
                 try:
-                    self._broadcast_settings()
+                    # prefer global registry-based broadcast if available
+                    try:
+                        from classes.animated_character import apply_global_pixel_settings
+                        applied = apply_global_pixel_settings(self.pixel_size, self.num_colors)
+                        self.message = f"Applied to {applied} characters"
+                        self._message_timer = 1.8
+                    except Exception:
+                        # fallback to scene-local broadcast
+                        self._broadcast_settings()
                 except Exception:
                     pass
             # mouse slider events
