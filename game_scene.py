@@ -1,4 +1,5 @@
 import pygame
+import pygame.surfarray
 import os
 
 from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, HEALTH, HEALTH_BG
@@ -52,6 +53,13 @@ except Exception:
 
 class GameScene:
     """Fighting game scene with 2-player combat."""
+
+    def _pixelate_surface(self, surface, pixel_size=6):
+        arr = pygame.surfarray.array3d(surface)
+        h, w = arr.shape[1], arr.shape[0]
+        small = pygame.transform.scale(surface, (w // pixel_size, h // pixel_size))
+        pixelated = pygame.transform.scale(small, (w, h))
+        return pixelated
 
     def __init__(self, app):
         self.app = app
@@ -415,7 +423,8 @@ class GameScene:
             if bg_image:
                 scaled = pygame.transform.smoothscale(
                     bg_image, (self.app.WIDTH, self.app.HEIGHT))
-                self.screen.blit(scaled, (0, 0))
+                pixelated = self._pixelate_surface(scaled, pixel_size=6)
+                self.screen.blit(pixelated, (0, 0))
             else:
                 self.screen.fill(BG)
         except Exception:
