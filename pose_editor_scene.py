@@ -135,8 +135,8 @@ class PoseEditorScene:
                 try:
                     pygame.mixer.music.load(music_path)
                     pygame.mixer.music.set_volume(0.5)
-                    # fade in over 1000ms
-                    pygame.mixer.music.play(-1, 0.0, 1000)
+                    # fade in over 500ms
+                    pygame.mixer.music.play(-1, 0.0, 500)
                 except Exception as e:
                     print(f"PoseEditorScene: failed to play music '{music_path}':", e)
             else:
@@ -158,7 +158,7 @@ class PoseEditorScene:
         # stop music when leaving the editor (fade out)
         try:
             if pygame.mixer.get_init():
-                pygame.mixer.music.fadeout(1000)
+                pygame.mixer.music.fadeout(500)
         except Exception:
             pass
 
