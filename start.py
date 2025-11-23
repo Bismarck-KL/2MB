@@ -14,7 +14,7 @@ from pose_editor_scene import PoseEditorScene
 
 
 class Application:
-    def __init__(self, width=1600, height=1200):
+    def __init__(self, width=800, height=600):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
@@ -28,13 +28,19 @@ class Application:
     # TO-DO(Qianrina): upload the resources with correct paths
         # resources
         images = {
-            "background": os.path.join("assets", "images", "background.jpg"),
-            "game_background": os.path.join("assets", "images", "game_background.jpg"),
-            "avatar_create_background": os.path.join("assets", "images", "avatar_create_background.jpg"),
-            "btn_start": os.path.join("assets", "images", "button_start.png"),
-            "btn_quit": os.path.join("assets", "images", "button_quit.png"),
-            "player1": os.path.join("assets", "photo", "player1", "tpose.png"),
-            "player2": os.path.join("assets", "photo", "player2", "tpose.png"),
+            "background": os.path.abspath(os.path.join("assets", "images", "background.jpg")),
+            "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.jpg")),
+            "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.jpg")),
+            "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
+            "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),
+            # player t-poses (used by AnimatedCharacter when available)
+            "player1": os.path.abspath(os.path.join("assets", "photo", "player1", "tpose.png")),
+            "player2": os.path.abspath(os.path.join("assets", "photo", "player2", "tpose.png")),
+            # guides for capture UI (optional files under each player folder)
+            "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
+            "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),
+            # fallback/default tpose used by some scenes
+            "default_tpose": os.path.abspath(os.path.join("assets", "photo", "tpose.png")),
         }
         self.res_mgr = ResourceManager(
             images=images, image_base_dir=None, audio_path=None)
