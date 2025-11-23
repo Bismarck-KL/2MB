@@ -5,6 +5,7 @@ import json
 from utils.color import BG, TITLE
 from utils.ui import Button
 from classes.animated_character import AnimatedCharacter
+from utils.settings import load_settings, save_settings
 
 
 class PoseEditorScene:
@@ -446,6 +447,11 @@ class PoseEditorScene:
             self._message_timer = 1.8
             # persist globally
             try:
+                save_settings({"pixel_size": self.pixel_size})
+            except Exception:
+                pass
+            # persist globally
+            try:
                 from utils.settings import save_settings
                 save_settings({'pixel_size': self.pixel_size})
             except Exception:
@@ -467,6 +473,11 @@ class PoseEditorScene:
             # show message briefly
             self.message = f"Colors: {self.num_colors}"
             self._message_timer = 1.8
+            # persist globally
+            try:
+                save_settings({"num_colors": self.num_colors})
+            except Exception:
+                pass
             # persist globally
             try:
                 from utils.settings import save_settings

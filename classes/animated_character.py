@@ -10,6 +10,7 @@ from .body_parts import BodyParts
 from .skeleton import Skeleton, BodyPart
 from .animation import AnimationController
 from .body_parts_profiles import BodyPartsConfig
+from utils.settings import load_settings
 
 
 class AnimatedCharacter:
@@ -170,6 +171,14 @@ class AnimatedCharacter:
 
         # 創建動畫控制器
         self.animation_controller = AnimationController(self.skeleton)
+
+        # apply global settings (pixelation) if available
+        try:
+            settings = load_settings()
+            self.pixel_size = int(settings.get('pixel_size', self.pixel_size))
+            self.num_colors = int(settings.get('num_colors', self.num_colors))
+        except Exception:
+            pass
 
         # 應用初始姿勢並更新骨骼
         self.animation_controller.set_pose('ready', immediate=True)
