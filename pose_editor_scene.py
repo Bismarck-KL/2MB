@@ -277,11 +277,9 @@ class PoseEditorScene:
                     pass
                 self.message = "Saved global settings"
                 self._message_timer = 1.8
-                # reload current scene to apply globally
+                # broadcast to existing AnimatedCharacter instances (no reload)
                 try:
-                    cur_name = self.app.scene.__class__.__name__
-                    self.app.change_scene(cur_name)
-                    return
+                    self._broadcast_settings()
                 except Exception:
                     pass
             # mouse slider events
@@ -579,3 +577,69 @@ class PoseEditorScene:
                 pass
         except Exception as e:
             self.message = f"Save failed: {e}"
+
+    def _broadcast_settings(self):
+        """Find AnimatedCharacter instances in the current scene and apply settings live.
+
+        Strategy: inspect top-level attributes of the scene and common containers (player_1/player_2,
+        attributes named 'animated_char', or attributes which are AnimatedCharacter themselves).
+        """
+        try:
+            scene = self.app.scene
+            applied = 0
+
+            def apply_to_obj(obj):
+                nonlocal applied
+                try:
+                    # if obj is AnimatedCharacter
+                    if isinstance(obj, AnimatedCharacter):
+                        try:
+                            obj.set_pixel_size(self.pixel_size)
+                        except Exception:
+                            obj.pixel_size = self.pixel_size
+                        try:
+                            obj.set_color_palette(self.num_colors)
+                        except Exception:
+                            obj.num_colors = self.num_colors
+                        applied += 1
+                        return True
+                except Exception:
+                    pass
+                return False
+
+            # check common attributes on scene
+            for name, val in list(vars(scene).items()):
+                if apply_to_obj(val):
+                    continue
+                # if object has attribute 'animated_char'
+                try:
+                    if hasattr(val, 'animated_char') and val.animated_char is not None:
+                        apply_to_obj(val.animated_char)
+                except Exception:
+                    pass
+
+            # also check nested attributes (one level deep)
+            for name, val in list(vars(scene).items()):
+                try:
+                    for sub_name in dir(val):
+                        if sub_name.startswith('_'):
+                            continue
+                        try:
+                            sub = getattr(val, sub_name)
+                            apply_to_obj(sub)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            # always apply to editor preview char as well
+            try:
+                apply_to_obj(self.char)
+            except Exception:
+                pass
+
+            self.message = f"Applied to {applied} characters"
+            self._message_timer = 1.8
+        except Exception:
+            self.message = "Apply failed"
+            self._message_timer = 1.8
