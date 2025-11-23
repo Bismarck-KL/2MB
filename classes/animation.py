@@ -170,7 +170,8 @@ class Poses:
             姿势数据字典，如果加载失败返回None
         """
 
-        json_file = f'pose_{pose_name}.json'
+        # Look for custom poses inside assets/poses/ by convention
+        json_file = os.path.join("assets", "poses", f'pose_{pose_name}.json')
 
         if os.path.exists(json_file):
             try:
@@ -221,17 +222,21 @@ class Poses:
         # working directory so the PoseEditor can save poses and have them
         # discovered automatically. These will override entries from
         # poses_all.json when name collisions occur.
+        # Additionally, load any individual pose_*.json files found in assets/poses
         try:
-            for fname in os.listdir('.'):
-                if fname.startswith('pose_') and fname.lower().endswith('.json'):
-                    try:
-                        name = fname[len('pose_'):-5]
-                        with open(fname, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                        if isinstance(data, dict):
-                            poses[name] = data
-                    except Exception:
-                        pass
+            assets_dir = os.path.join("assets", "poses")
+            if os.path.isdir(assets_dir):
+                for fname in os.listdir(assets_dir):
+                    if fname.startswith('pose_') and fname.lower().endswith('.json'):
+                        try:
+                            name = fname[len('pose_'):-5]
+                            path = os.path.join(assets_dir, fname)
+                            with open(path, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            if isinstance(data, dict):
+                                poses[name] = data
+                        except Exception:
+                            pass
         except Exception:
             pass
 

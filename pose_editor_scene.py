@@ -62,16 +62,18 @@ class PoseEditorScene:
         except Exception:
             ctrl_poses = ['ready']
 
-        # discover pose_*.json files and map names -> filenames
+        # discover pose_*.json files in assets/poses and map names -> full path
         self.pose_file_map = {}
         try:
-            for fname in os.listdir('.'):
-                if fname.startswith('pose_') and fname.lower().endswith('.json'):
-                    try:
-                        name = fname[len('pose_'):-5]
-                        self.pose_file_map[name] = fname
-                    except Exception:
-                        pass
+            assets_dir = os.path.join('assets', 'poses')
+            if os.path.isdir(assets_dir):
+                for fname in os.listdir(assets_dir):
+                    if fname.startswith('pose_') and fname.lower().endswith('.json'):
+                        try:
+                            name = fname[len('pose_'):-5]
+                            self.pose_file_map[name] = os.path.join(assets_dir, fname)
+                        except Exception:
+                            pass
         except Exception:
             pass
 
@@ -244,10 +246,11 @@ class PoseEditorScene:
                 # overwrite selected pose with current skeleton (save to original file if exists)
                 try:
                     name = self.selected_pose_name or 'custom'
-                    # choose filename: use discovered file if present, else default
-                    fname = self.pose_file_map.get(name, f"pose_{name}.json")
+                    # choose filename: use discovered file if present, else default in assets/poses
+                    default_fname = os.path.join('assets', 'poses', f"pose_{name}.json")
+                    fname = self.pose_file_map.get(name, default_fname)
                     self._save_pose(name, fname)
-                    # update mapping and reload
+                    # update mapping and reload (store full path)
                     self.pose_file_map[name] = fname
                     try:
                         self.char.animation_controller.reload_poses()
