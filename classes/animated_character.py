@@ -423,7 +423,8 @@ class AnimatedCharacter:
 
     def set_pixel_size(self, size):
         """設置像素大小 (2-16)"""
-        self.pixel_size = max(2, min(16, size))
+        # allow up to 32 to match editor slider range
+        self.pixel_size = max(2, min(32, size))
 
     def set_color_palette(self, num_colors):
         """設置調色板大小 (4-32)"""
