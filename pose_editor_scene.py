@@ -337,6 +337,10 @@ class PoseEditorScene:
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
         self.save_button.draw(self.screen, mouse_pos)
+        try:
+            self.apply_button.draw(self.screen, mouse_pos)
+        except Exception:
+            pass
 
         # parts list and selected
         x = 40
