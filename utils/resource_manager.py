@@ -30,9 +30,11 @@ class ResourceManager:
         self.audio_path = audio_path
 
         # create loaders
-        self.image_loader = GameImageLoader(images, base_dir=image_base_dir, create_surfaces_on_main_thread=False)
-        # pass the audio path into the music loader if provided
-        self.audio_loader = BackgroundMusicLoader(path=audio_path) if audio_path else BackgroundMusicLoader()
+        self.image_loader = GameImageLoader(
+            images, base_dir=image_base_dir, create_surfaces_on_main_thread=False)
+        # pass the audio path into the music loader if provided, or None to skip audio
+        self.audio_loader = BackgroundMusicLoader(
+            path=audio_path) if audio_path else None
 
     def load_all(self, report: Optional[Callable[[float], None]] = None, stop_event=None) -> None:
         """Load images and audio, reporting combined progress (0..100).
@@ -58,18 +60,25 @@ class ResourceManager:
         # load images
         self.image_loader.load(report=report_images, stop_event=stop_event)
 
-        # load audio
-        self.audio_loader.load(report=report_audio, stop_event=stop_event)
+        # load audio (only if audio_loader exists)
+        if self.audio_loader:
+            self.audio_loader.load(report=report_audio, stop_event=stop_event)
+        elif report:
+            # report 100% if no audio to load
+            report(100)
 
     # Accessors
     def get_image(self, key: str):
         return self.image_loader.get(key)
 
     def play_music(self):
-        self.audio_loader.play()
+        if self.audio_loader:
+            self.audio_loader.play()
 
     def finalize_and_play(self):
         """Finalize audio on the main thread (initialize mixer and load) and start playback."""
+        if not self.audio_loader:
+            return
         try:
             self.audio_loader.finalize()
         except Exception:
@@ -78,7 +87,8 @@ class ResourceManager:
         self.audio_loader.play()
 
     def stop_music(self):
-        self.audio_loader.stop()
+        if self.audio_loader:
+            self.audio_loader.stop()
 
 
 __all__ = ["ResourceManager"]
