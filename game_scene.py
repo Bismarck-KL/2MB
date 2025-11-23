@@ -233,7 +233,7 @@ class GameScene:
             # 4: 防禦
             if keys[pygame.K_4]:
                 self.player_1.is_blocking = True
-                self.player_1.set_pose('block')
+                self.player_1.trigger_action('block', 0.5)
             else:
                 self.player_1.is_blocking = False
         
@@ -265,7 +265,7 @@ class GameScene:
             # R: 防禦
             if keys[pygame.K_r]:
                 self.player_2.is_blocking = True
-                self.player_2.set_pose('block')
+                self.player_2.trigger_action('block', 0.5)
             else:
                 self.player_2.is_blocking = False
     

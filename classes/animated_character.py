@@ -47,6 +47,22 @@ class AnimatedCharacter:
         self.render_surface = None
         self.final_surface = None
 
+        # 預載入動作聲效
+        self.sfx = {
+            'punch': self._load_sound('assets/sounds/punch sfx.mp3'),
+            'kick': self._load_sound('assets/sounds/kick sfx.mp3'),
+            'jump': self._load_sound('assets/sounds/jump sfx.mp3'),
+            'hurt': self._load_sound('assets/sounds/hurt sfx.mp3'),
+            'block': self._load_sound('assets/sounds/block sfx.mp3'),
+        }
+
+    def _load_sound(self, path):
+        try:
+            return pygame.mixer.Sound(path)
+        except Exception as e:
+            print(f"[SFX] Failed to load {path}: {e}")
+            return None
+
     def _load_and_setup_skeleton(self, image_path):
         """載入圖片並建立骨骼系統"""
         # 載入圖片
@@ -214,6 +230,10 @@ class AnimatedCharacter:
             action_name: 動作名稱
             duration: 動作持續時間（秒）- 目前由AnimationController自動控制
         """
+        # 播放對應聲效
+        snd = self.sfx.get(action_name)
+        if snd:
+            snd.play()
         self.animation_controller.set_pose(action_name)
 
     def update(self, dt):
