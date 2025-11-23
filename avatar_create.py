@@ -163,18 +163,31 @@ class AvatarCreateScene:
             if not guide_path or not os.path.exists(guide_path):
                 return None, None
 
-            # Simply load the image (prefer its alpha channel if present)
+            # Simply load the image (prefer ResourceManager-provided surface
+            # when available, then pygame, then OpenCV fallback)
             guide = None
             loader_used = None
             try:
-                guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
-                loader_used = 'pygame.convert_alpha'
+                if getattr(self, 'res_mgr', None):
+                    try:
+                        guide = self.res_mgr.get_image_by_path(os.path.abspath(guide_path))
+                        if guide:
+                            loader_used = 'res_mgr'
+                    except Exception:
+                        guide = None
             except Exception:
+                guide = None
+
+            if guide is None:
                 try:
-                    guide = pygame.image.load(os.path.abspath(guide_path)).convert()
-                    loader_used = 'pygame.convert'
+                    guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
+                    loader_used = 'pygame.convert_alpha'
                 except Exception:
-                    guide = None
+                    try:
+                        guide = pygame.image.load(os.path.abspath(guide_path)).convert()
+                        loader_used = 'pygame.convert'
+                    except Exception:
+                        guide = None
 
             # if pygame failed, try OpenCV -> numpy -> pygame surface fallback
             if guide is None:
