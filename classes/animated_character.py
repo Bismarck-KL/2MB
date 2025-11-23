@@ -206,7 +206,12 @@ class AnimatedCharacter:
         Args:
             dt: Delta time (秒) - 目前AnimationController不使用dt，未來可能需要
         """
-        self.animation_controller.update()
+        # pass dt into the animation controller (now time-based)
+        try:
+            self.animation_controller.update(dt)
+        except TypeError:
+            # fallback if controller doesn't accept dt for some reason
+            self.animation_controller.update()
 
     def render(self, target_surface, offset=(0, 0)):
         """

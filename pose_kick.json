@@ -1,0 +1,72 @@
+{
+  "torso": {
+    "rotation": -10,
+    "position": [
+      55,
+      11.439831861116033
+    ]
+  },
+  "head": {
+    "rotation": -5.0,
+    "position": [
+      -5,
+      -64
+    ]
+  },
+  "left_upper_arm": {
+    "rotation": -30.0,
+    "position": [
+      -76,
+      -68
+    ]
+  },
+  "left_forearm": {
+    "rotation": -25.0,
+    "position": [
+      -59,
+      30
+    ]
+  },
+  "right_upper_arm": {
+    "rotation": 30.0,
+    "position": [
+      76,
+      -68
+    ]
+  },
+  "right_forearm": {
+    "rotation": 90.0,
+    "position": [
+      53,
+      32
+    ]
+  },
+  "left_thigh": {
+    "rotation": 32.0,
+    "position": [
+      -35,
+      77
+    ]
+  },
+  "left_shin": {
+    "rotation": -3.0,
+    "position": [
+      -2,
+      96
+    ]
+  },
+  "right_thigh": {
+    "rotation": -90.0,
+    "position": [
+      -1,
+      85
+    ]
+  },
+  "right_shin": {
+    "rotation": 0.0,
+    "position": [
+      6,
+      100
+    ]
+  }
+}

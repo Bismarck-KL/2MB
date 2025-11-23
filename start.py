@@ -10,6 +10,7 @@ from utils.resource_manager import ResourceManager
 from menu_scene import MenuScene
 from game_scene import GameScene
 from avatar_create import AvatarCreateScene
+from pose_editor_scene import PoseEditorScene
 
 
 class Application:
@@ -45,6 +46,7 @@ class Application:
             "MenuScene": MenuScene,
             "GameScene": GameScene,
             "AvatarCreateScene": AvatarCreateScene,
+            "PoseEditorScene": PoseEditorScene,
         }
 
     def change_scene(self, scene_name: str):
