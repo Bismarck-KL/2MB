@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import math
 import os
-import sys
+import shutil
 
 from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, NEXT_BASE, NEXT_HOVER
 from utils.ui import Button
@@ -170,17 +170,15 @@ class AvatarCreateScene:
             # if pygame failed, try OpenCV -> numpy -> pygame surface fallback
             if guide is None:
                 try:
-                    import cv2 as _cv2
-                    import numpy as _np
-                    img = _cv2.imread(guide_path, _cv2.IMREAD_UNCHANGED)
+                    img = cv2.imread(guide_path, cv2.IMREAD_UNCHANGED)
                     if img is not None:
                         # if image has alpha channel, keep it; else convert to RGBA
                         if img.ndim == 3 and img.shape[2] == 4:
-                            img_rgba = _cv2.cvtColor(img, _cv2.COLOR_BGRA2RGBA)
+                            img_rgba = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
                         else:
-                            img_rgb = _cv2.cvtColor(img, _cv2.COLOR_BGR2RGB)
-                            alpha = _np.full((img_rgb.shape[0], img_rgb.shape[1], 1), 255, dtype=_np.uint8)
-                            img_rgba = _np.concatenate([img_rgb, alpha], axis=2)
+                            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                            alpha = np.full((img_rgb.shape[0], img_rgb.shape[1], 1), 255, dtype=np.uint8)
+                            img_rgba = np.concatenate([img_rgb, alpha], axis=2)
                         h, w = img_rgba.shape[:2]
                         try:
                             guide = pygame.image.frombuffer(img_rgba.tobytes(), (w, h), 'RGBA')
@@ -193,22 +191,20 @@ class AvatarCreateScene:
             # Also generate a high-contrast outline surface using OpenCV Canny
             guide_outline = None
             try:
-                import cv2 as _cv2
-                import numpy as _np
-                img_cv = _cv2.imread(guide_path, _cv2.IMREAD_GRAYSCALE)
+                img_cv = cv2.imread(guide_path, cv2.IMREAD_GRAYSCALE)
                 if img_cv is not None:
                     # blur slightly then Canny
-                    blurred = _cv2.GaussianBlur(img_cv, (5, 5), 0)
-                    edges = _cv2.Canny(blurred, 50, 150)
+                    blurred = cv2.GaussianBlur(img_cv, (5, 5), 0)
+                    edges = cv2.Canny(blurred, 50, 150)
                     # dilate edges to make lines thicker and more visible
                     try:
-                        kernel = _cv2.getStructuringElement(_cv2.MORPH_RECT, (3, 3))
-                        edges = _cv2.dilate(edges, kernel, iterations=1)
+                        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                        edges = cv2.dilate(edges, kernel, iterations=1)
                     except Exception:
                         pass
                     h, w = edges.shape[:2]
                     # create RGBA array for outline: white lines, transparent elsewhere
-                    outline = _np.zeros((h, w, 4), dtype=_np.uint8)
+                    outline = np.zeros((h, w, 4), dtype=np.uint8)
                     outline[edges > 0] = [255, 255, 255, 255]
                     try:
                         guide_outline = pygame.image.frombuffer(outline.tobytes(), (w, h), 'RGBA')
@@ -554,22 +550,21 @@ class AvatarCreateScene:
             save_path = os.path.join(save_dir, f"player{self.current_player}_photo.jpg")
             # last_frame is BGR (from OpenCV). Save a sharpened, high-res version if possible.
             try:
-                import cv2 as _cv2
                 img = self.last_frame
                 if img is not None:
                     # resize to desired capture resolution (use cubic for quality)
                     try:
-                        img_resized = _cv2.resize(img, (int(self.capture_width), int(self.capture_height)), interpolation=_cv2.INTER_CUBIC)
+                        img_resized = cv2.resize(img, (int(self.capture_width), int(self.capture_height)), interpolation=cv2.INTER_CUBIC)
                     except Exception:
                         img_resized = img
 
                     # apply simple unsharp mask to increase perceived sharpness
                     try:
-                        blurred = _cv2.GaussianBlur(img_resized, (0, 0), 3)
-                        sharpened = _cv2.addWeighted(img_resized, 1.5, blurred, -0.5, 0)
-                        _cv2.imwrite(save_path, sharpened)
+                        blurred = cv2.GaussianBlur(img_resized, (0, 0), 3)
+                        sharpened = cv2.addWeighted(img_resized, 1.5, blurred, -0.5, 0)
+                        cv2.imwrite(save_path, sharpened)
                     except Exception:
-                        _cv2.imwrite(save_path, img_resized)
+                        cv2.imwrite(save_path, img_resized)
                 else:
                     cv2.imwrite(save_path, self.last_frame)
             except Exception:
@@ -584,35 +579,33 @@ class AvatarCreateScene:
             try:
                 if getattr(self, 'guide_surf', None):
                     try:
-                        import numpy as _np
-                        import cv2 as _cv2
                         # scale guide surface to target size and extract RGBA bytes
                         guide_scaled = pygame.transform.smoothscale(self.guide_surf, (target_w, target_h))
                         guide_bytes = pygame.image.tostring(guide_scaled, 'RGBA')
-                        guide_arr = _np.frombuffer(guide_bytes, dtype=_np.uint8).reshape((target_h, target_w, 4))
+                        guide_arr = np.frombuffer(guide_bytes, dtype=np.uint8).reshape((target_h, target_w, 4))
                         alpha_ch = guide_arr[:, :, 3]
                         # If the guide has no meaningful alpha, derive mask from luminance
-                        if _np.mean(alpha_ch) < 10:
-                            lum = (_np.dot(guide_arr[:, :, :3], [0.2989, 0.5870, 0.1140])).astype(_np.uint8)
-                            mask = (lum > 10).astype(_np.uint8) * 255
+                        if np.mean(alpha_ch) < 10:
+                            lum = (np.dot(guide_arr[:, :, :3], [0.2989, 0.5870, 0.1140])).astype(np.uint8)
+                            mask = (lum > 10).astype(np.uint8) * 255
                         else:
-                            mask = (alpha_ch > 10).astype(_np.uint8) * 255
+                            mask = (alpha_ch > 10).astype(np.uint8) * 255
                         # Apply configured guide_alpha as a multiplier to the mask
                         try:
                             factor = float(getattr(self, 'guide_alpha', 255)) / 255.0
                             # apply guide_alpha_factor to further reduce opacity in mask computation
                             factor = factor * float(getattr(self, 'guide_alpha_factor', 1.0))
-                            mask = (_np.clip((mask.astype(_np.float32) * factor), 0, 255)).astype(_np.uint8)
-                            mask = (mask > 10).astype(_np.uint8) * 255
+                            mask = (np.clip((mask.astype(np.float32) * factor), 0, 255)).astype(np.uint8)
+                            mask = (mask > 10).astype(np.uint8) * 255
                         except Exception:
                             pass
 
                         # resize captured frame and write RGBA using mask as alpha
-                        resized_bgr = _cv2.resize(self.last_frame, (target_w, target_h), interpolation=_cv2.INTER_CUBIC)
-                        b, g, r = _cv2.split(resized_bgr)
-                        alpha = mask.astype(_np.uint8)
-                        rgba = _cv2.merge([b, g, r, alpha])
-                        _cv2.imwrite(tpose_path, rgba)
+                        resized_bgr = cv2.resize(self.last_frame, (target_w, target_h), interpolation=cv2.INTER_CUBIC)
+                        b, g, r = cv2.split(resized_bgr)
+                        alpha = mask.astype(np.uint8)
+                        rgba = cv2.merge([b, g, r, alpha])
+                        cv2.imwrite(tpose_path, rgba)
                         used_guide_cutout = True
                     except Exception as e_gc:
                         print("Mask-based cutout failed:", e_gc)
@@ -620,17 +613,14 @@ class AvatarCreateScene:
                 if not used_guide_cutout:
                     # fallback: simple resize without alpha
                     try:
-                        import cv2 as _cv2
-                        img = _cv2.imread(save_path, _cv2.IMREAD_UNCHANGED)
+                        img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
                         if img is not None:
-                            resized = _cv2.resize(img, (target_w, target_h), interpolation=_cv2.INTER_CUBIC)
-                            _cv2.imwrite(tpose_path, resized)
+                            resized = cv2.resize(img, (target_w, target_h), interpolation=cv2.INTER_CUBIC)
+                            cv2.imwrite(tpose_path, resized)
                         else:
-                            import shutil
                             shutil.copyfile(save_path, tpose_path)
                     except Exception:
                         try:
-                            import shutil
                             shutil.copyfile(save_path, tpose_path)
                         except Exception:
                             pass
@@ -715,45 +705,42 @@ class AvatarCreateScene:
         Uses OpenCV GrabCut with a full-rect initialization and falls back to a simple threshold alpha if GrabCut fails.
         """
         try:
-            import cv2 as _cv2
-            import numpy as _np
-
-            img = _cv2.imread(src_path, _cv2.IMREAD_COLOR)
+            img = cv2.imread(src_path, cv2.IMREAD_COLOR)
             if img is None:
                 return False
 
             h, w = img.shape[:2]
             # initialize mask, bgd/fgd models
-            mask = _np.zeros((h, w), _np.uint8)
+            mask = np.zeros((h, w), np.uint8)
             rect = (max(1, int(w*0.05)), max(1, int(h*0.05)), max(1, int(w*0.9)), max(1, int(h*0.9)))
-            bgdModel = _np.zeros((1, 65), _np.float64)
-            fgdModel = _np.zeros((1, 65), _np.float64)
+            bgdModel = np.zeros((1, 65), np.float64)
+            fgdModel = np.zeros((1, 65), np.float64)
 
             try:
-                _cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 5, _cv2.GC_INIT_WITH_RECT)
-                mask2 = _np.where((mask == _cv2.GC_BGD) | (mask == _cv2.GC_PR_BGD), 0, 1).astype('uint8')
+                cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
+                mask2 = np.where((mask == cv2.GC_BGD) | (mask == cv2.GC_PR_BGD), 0, 1).astype('uint8')
                 # apply mask
-                img_fg = img * mask2[:, :, _np.newaxis]
+                img_fg = img * mask2[:, :, np.newaxis]
 
                 # create alpha channel from mask2
-                alpha = (mask2 * 255).astype(_np.uint8)
-                b, g, r = _cv2.split(img_fg)
-                rgba = _cv2.merge([b, g, r, alpha])
+                alpha = (mask2 * 255).astype(np.uint8)
+                b, g, r = cv2.split(img_fg)
+                rgba = cv2.merge([b, g, r, alpha])
 
                 # resize to target and save
-                rgba_resized = _cv2.resize(rgba, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
-                _cv2.imwrite(dst_path, rgba_resized)
+                rgba_resized = cv2.resize(rgba, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                cv2.imwrite(dst_path, rgba_resized)
                 return True
             except Exception:
                 # fallback: use simple background mask via adaptive threshold on grayscale
                 try:
-                    gray = _cv2.cvtColor(img, _cv2.COLOR_BGR2GRAY)
-                    _, th = _cv2.threshold(gray, 250, 255, _cv2.THRESH_BINARY_INV)
-                    alpha = th.astype(_np.uint8)
-                    b, g, r = _cv2.split(img)
-                    rgba = _cv2.merge([b, g, r, alpha])
-                    rgba_resized = _cv2.resize(rgba, (target_w, target_h), interpolation=_cv2.INTER_LINEAR)
-                    _cv2.imwrite(dst_path, rgba_resized)
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _, th = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)
+                    alpha = th.astype(np.uint8)
+                    b, g, r = cv2.split(img)
+                    rgba = cv2.merge([b, g, r, alpha])
+                    rgba_resized = cv2.resize(rgba, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                    cv2.imwrite(dst_path, rgba_resized)
                     return True
                 except Exception:
                     return False
