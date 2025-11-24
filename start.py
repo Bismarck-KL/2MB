@@ -14,7 +14,7 @@ from pose_editor_scene import PoseEditorScene
 
 
 class Application:
-    def __init__(self, width=1600, height=1200):
+    def __init__(self, width=1200, height=900):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
