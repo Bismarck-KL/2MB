@@ -161,7 +161,7 @@ class ResourceManager:
                 pass
 
     def finalize_and_play(self, key: Optional[str] = None):
-        print("ResourceManager: finalize_and_play called")
+        # print("ResourceManager: finalize_and_play called")
         """Finalize (on main thread) and play a named music track.
 
         If multiple audio files were provided, `key` selects which one to
@@ -171,35 +171,34 @@ class ResourceManager:
         """
         if self.audio_loader and not self.audio_loaders:
             try:
-                print("ResourceManager: finalizing single audio_loader")    
+                # print("ResourceManager: finalizing single audio_loader")    
                 self.audio_loader.finalize()
             except Exception:
-                print("ResourceManager: failed to finalize single audio_loader")
+                # print("ResourceManager: failed to finalize single audio_loader")
                 return
-            print("ResourceManager: playing single audio_loader")
+            # print("ResourceManager: playing single audio_loader")
             self.audio_loader.play()
             return
         
-        print(f"ResourceManager: finalizing and playing audio_loader with key '{key}'")
-
+        # print(f"ResourceManager: finalizing and playing audio_loader with key '{key}'")
         if not self.audio_loaders:
-            print("ResourceManager: no audio_loaders available")
+            # print("ResourceManager: no audio_loaders available")
             return
 
         # choose key
         if key is None:
-            print("ResourceManager: no key provided, defaulting to 'game' or first available")
+            # print("ResourceManager: no key provided, defaulting to 'game' or first available")
             key = 'game' if 'game' in self.audio_loaders else next(iter(self.audio_loaders))
 
-        print(f"ResourceManager: finalizing audio_loader with key '{key}'")
+        # print(f"ResourceManager: finalizing audio_loader with key '{key}'")
         loader = self.audio_loaders.get(key)
         if not loader:
-            print(f"ResourceManager: no audio_loader found with key '{key}'")
+            # print(f"ResourceManager: no audio_loader found with key '{key}'")
             return
         try:
-            print(f"ResourceManager: finalizing loader for key '{key}'")
+            # print(f"ResourceManager: finalizing loader for key '{key}'")
             loader.finalize()
-            print(f"ResourceManager: playing loader for key '{key}'")
+            # print(f"ResourceManager: playing loader for key '{key}'")
             loader.play()
         except Exception:
             return
