@@ -15,6 +15,8 @@ from utils.color import (
     NEXT_HOVER,
     CAPTURE_BASE,
     CAPTURE_HOVER,
+    BLACK,
+    HINT_TEXT,
 )
 from utils.loading import run_loading_with_callback
 from utils.ui import Button
@@ -621,7 +623,7 @@ class AvatarCreateScene:
                         self.screen.blit(pv, (pv_x, pv_y))
                         # hint text
                         hint = self.font.render(
-                            "確認角色後按 Next 前往 Player2 拍照", True, (230, 230, 230)
+                            "確認角色後按 Next 前往 Player2 拍照", True, HINT_TEXT
                         )
                         self.screen.blit(
                             hint,
@@ -673,7 +675,7 @@ class AvatarCreateScene:
 
                 # instructions (clamped to remain on-screen)
                 instr = self.font.render(
-                    "Press SPACE to capture, ESC to cancel", True, (230, 230, 230)
+                    "Press SPACE to capture, ESC to cancel", True, HINT_TEXT
                 )
                 instr_y = min(preview_y + target_h + 20, self.app.HEIGHT - 28)
                 irect = instr.get_rect(center=(self.app.WIDTH // 2, instr_y))
@@ -694,7 +696,7 @@ class AvatarCreateScene:
                         secs = max(0, int(math.ceil(remaining)))
                         # print("Auto-capture in:", secs, "seconds")
                         cd_txt = self.title_font.render(
-                            f"Auto capture in: {secs}s", True, (255, 255, 255)
+                            f"Auto capture in: {secs}s", True, BLACK
                         )
                         # place countdown near the top of the preview box for visibility
                         cd_rect = cd_txt.get_rect(
@@ -731,7 +733,7 @@ class AvatarCreateScene:
                 self.screen.blit(bg, (pv_x - 4, pv_y - 4))
                 self.screen.blit(pv, (pv_x, pv_y))
                 hint = self.font.render(
-                    "確認角色後按 Next 前往 Player2 拍照", True, (230, 230, 230)
+                    "確認角色後按 Next 前往 Player2 拍照", True, HINT_TEXT
                 )
                 self.screen.blit(
                     hint,
