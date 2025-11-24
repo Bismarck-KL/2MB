@@ -27,6 +27,8 @@ NEXT_HOVER = (65, 150, 255)
 # slightly lighter blue for capture action and a darker hover
 CAPTURE_BASE = (120, 180, 255)
 CAPTURE_HOVER = (80, 140, 220)
+HINT_TEXT = (230,230,230)
+
 
 # Misc
 STATUS = (200, 200, 200)
@@ -57,6 +59,7 @@ COLORS = {
     "health_red": HEALTH_RED,
     "capture_base": CAPTURE_BASE,
     "capture_hover": CAPTURE_HOVER,
+    "hint_text": HINT_TEXT,
 }
 
 __all__ = [
@@ -79,4 +82,5 @@ __all__ = [
     "CAPTURE_BASE",
     "CAPTURE_HOVER",
     "COLORS",
+    "HINT_TEXT",
 ]
