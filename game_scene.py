@@ -130,31 +130,38 @@ class GameScene:
 
         # Play background music for the game scene (looped)
         try:
-            # ensure mixer is initialized
-            try:
-                if not pygame.mixer.get_init():
-                    print("[SFX] Initializing mixer with 16 channels...")
-                    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                    pygame.mixer.set_num_channels(16)
-            except Exception:
-                # try to initialize with default params
-                try:
-                    pygame.mixer.init()
-                    pygame.mixer.set_num_channels(16)
-                except Exception:
-                    pass
-
+            # Prefer using the ResourceManager if available (preloaded bgm).
             music_path = os.path.join('assets', 'sounds', 'fighting scene_bgm.mp3')
-            if os.path.exists(music_path):
+            if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
                 try:
-                    pygame.mixer.music.load(music_path)
-                    pygame.mixer.music.set_volume(0.6)
-                    # fade in over 500ms
-                    pygame.mixer.music.play(-1, 0.0, 500)  # loop indefinitely
-                except Exception as e:
-                    print(f"GameScene: failed to play music '{music_path}':", e)
+                    # finalize & play the named 'fighting' track (falls back if missing)
+                    self.res_mgr.finalize_and_play('fighting')
+                except Exception:
+                    # fall back to local mixer play below
+                    pass
             else:
-                print(f"GameScene: music file not found: {music_path}")
+                # ensure mixer is initialized then load and play the file directly
+                try:
+                    if not pygame.mixer.get_init():
+                        print("[SFX] Initializing mixer with 16 channels...")
+                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        pygame.mixer.set_num_channels(16)
+                except Exception:
+                    try:
+                        pygame.mixer.init()
+                        pygame.mixer.set_num_channels(16)
+                    except Exception:
+                        pass
+
+                if os.path.exists(music_path):
+                    try:
+                        pygame.mixer.music.load(music_path)
+                        pygame.mixer.music.set_volume(0.6)
+                        pygame.mixer.music.play(-1, 0.0, 500)
+                    except Exception as e:
+                        print(f"GameScene: failed to play music '{music_path}':", e)
+                else:
+                    print(f"GameScene: music file not found: {music_path}")
         except Exception:
             pass
 
