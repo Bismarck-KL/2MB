@@ -85,28 +85,38 @@ class MenuScene:
             self.app.change_scene("PoseEditorScene")
 
     def on_enter(self):
-        # play menu background music (different from game scene)
+        # play menu background music (prefer ResourceManager if available)
         try:
-            try:
-                if not pygame.mixer.get_init():
-                    pygame.mixer.init()
-            except Exception:
+            # If ResourceManager has preloaded audio loaders, prefer using it
+            if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
                 try:
-                    pygame.mixer.init()
+                    # finalize & play the named 'game' track (will fall back inside RM if missing)
+                    self.res_mgr.finalize_and_play('game')
                 except Exception:
+                    # fall back to direct mixer below
                     pass
-
-            music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
-            if os.path.exists(music_path):
-                try:
-                    pygame.mixer.music.load(music_path)
-                    pygame.mixer.music.set_volume(0.5)
-                    # fade in over 500ms
-                    pygame.mixer.music.play(-1, 0.0, 500)
-                except Exception as e:
-                    print(f"MenuScene: failed to play music '{music_path}':", e)
             else:
-                print(f"MenuScene: music file not found: {music_path}")
+                # ensure mixer is initialized then load and play the file directly
+                try:
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init()
+                except Exception:
+                    try:
+                        pygame.mixer.init()
+                    except Exception:
+                        pass
+
+                music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
+                if os.path.exists(music_path):
+                    try:
+                        pygame.mixer.music.load(music_path)
+                        pygame.mixer.music.set_volume(0.5)
+                        # fade in over 500ms
+                        pygame.mixer.music.play(-1, 0.0, 500)
+                    except Exception as e:
+                        print(f"MenuScene: failed to play music '{music_path}':", e)
+                else:
+                    print(f"MenuScene: music file not found: {music_path}")
         except Exception:
             pass
 
