@@ -107,6 +107,38 @@ class AvatarCreateScene:
         except Exception:
             self.guide_surf = None
             self.guide_outline_surf = None
+    def on_enter(self):
+        # play menu/background music for this scene
+        try:
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+            except Exception:
+                try:
+                    pygame.mixer.init()
+                except Exception:
+                    pass
+
+            music_path = os.path.join('assets', 'sounds', 'bgm.mp3')
+            if os.path.exists(music_path):
+                try:
+                    pygame.mixer.music.load(music_path)
+                    pygame.mixer.music.set_volume(0.5)
+                    # fade in over 500ms
+                    pygame.mixer.music.play(-1, 0.0, 500)
+                except Exception as e:
+                    print(f"AvatarCreateScene: failed to play music '{music_path}':", e)
+            else:
+                print(f"AvatarCreateScene: music file not found: {music_path}")
+        except Exception:
+            pass
+
+    def on_exit(self):
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.music.fadeout(500)
+        except Exception:
+            pass
     def _load_guide_from_disk(self, player=1):
         try:
             base_dir = os.path.join("assets", "photo", f"player{player}")
