@@ -33,9 +33,6 @@ class Application:
             "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.jpg")),
             "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
             "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),
-            # player t-poses (used by AnimatedCharacter when available)
-            "player1": os.path.abspath(os.path.join("assets", "photo", "player1", "tpose.png")),
-            "player2": os.path.abspath(os.path.join("assets", "photo", "player2", "tpose.png")),
             # guides for capture UI (optional files under each player folder)
             "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
             "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),

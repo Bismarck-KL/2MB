@@ -8,7 +8,6 @@ import os
 from collections import Counter
 import weakref
 
-from .body_parts import BodyParts
 from .skeleton import Skeleton, BodyPart
 from .animation import AnimationController
 from .body_parts_profiles import BodyPartsConfig

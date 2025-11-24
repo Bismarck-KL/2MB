@@ -41,13 +41,8 @@ class PoseEditorScene:
             tpose_path = os.path.join("assets", "photo", "tpose.png")
 
         try:
+            # load the tpose image for the character
             self.char = AnimatedCharacter(image_path=tpose_path, scale=0.9)
-            try:
-                # provide the shared ResourceManager so the character can reuse images/sfx
-                if hasattr(self, 'res_mgr') and self.res_mgr:
-                    self.char.set_resource_manager(self.res_mgr)
-            except Exception:
-                pass
         except Exception:
             # if loading fails, create with default path that may exist later
             self.char = AnimatedCharacter(image_path=tpose_path, scale=0.9)
