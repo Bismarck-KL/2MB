@@ -25,17 +25,23 @@ class ResourceManager:
     audio_path: optional path for BackgroundMusicLoader (if None uses default)
     """
 
-    def __init__(self, images: Dict[str, str], image_base_dir: Optional[str] = None, audio_path: Optional[str] = None):
+    def __init__(self, images: Dict[str, str], image_base_dir: Optional[str] = None,
+                 audio_path: Optional[str] = None, audio_files: Optional[Dict[str, str]] = None):
         self.images_map = images
         self.image_base_dir = image_base_dir
-        self.audio_path = audio_path
 
         # create loaders
         self.image_loader = GameImageLoader(
             images, base_dir=image_base_dir, create_surfaces_on_main_thread=False)
-        # pass the audio path into the music loader if provided, or None to skip audio
-        self.audio_loader = BackgroundMusicLoader(
-            path=audio_path) if audio_path else None
+
+        # audio: support either a single audio_path (backwards compat) or a
+        # dict of named audio files. We create BackgroundMusicLoader instances
+        # for each provided path; actual `finalize()` (which touches the mixer)
+        # is done on demand by `finalize_and_play` / `play_music`.
+        self.audio_loader = BackgroundMusicLoader(path=audio_path) if audio_path else None
+        self.audio_loaders: Optional[Dict[str, BackgroundMusicLoader]] = None
+        if audio_files:
+            self.audio_loaders = {k: BackgroundMusicLoader(path=v) for k, v in (audio_files.items())}
 
     def load_all(self, report: Optional[Callable[[float], None]] = None, stop_event=None) -> None:
         """Load images and audio, reporting combined progress (0..100).
@@ -61,12 +67,33 @@ class ResourceManager:
         # load images
         self.image_loader.load(report=report_images, stop_event=stop_event)
 
-        # load audio (only if audio_loader exists)
+        # load audio: either a single loader or multiple named loaders
         if self.audio_loader:
             self.audio_loader.load(report=report_audio, stop_event=stop_event)
-        elif report:
-            # report 100% if no audio to load
-            report(100)
+        elif self.audio_loaders:
+            # split the audio weight between each named loader for smooth progress
+            keys = list(self.audio_loaders.keys())
+            n = len(keys)
+
+            def per_loader_report(idx, pct):
+                # compute combined percent: image_weight*100 + audio_weight*(idx/n + pct/n)
+                if report:
+                    base = int(img_weight * 100)
+                    frac = (idx + pct / 100.0) / n
+                    combined = int(base + frac * audio_weight * 100)
+                    report(min(100, combined))
+
+            for i, k in enumerate(keys):
+                loader = self.audio_loaders[k]
+                # wrapper to convert 0..100->0..100 for per_loader_report
+                def make_report(i):
+                    return lambda p: per_loader_report(i, p)
+
+                loader.load(report=make_report(i), stop_event=stop_event)
+        else:
+            if report:
+                # nothing to load for audio
+                report(100)
 
     # Accessors
     def get_image(self, key: str):
@@ -118,23 +145,59 @@ class ResourceManager:
             return None
 
     def play_music(self):
+        # Backwards-compatible play: play the single loader if present, else
+        # play the 'game' key if available, else the first named loader.
         if self.audio_loader:
             self.audio_loader.play()
+            return
+        if self.audio_loaders:
+            # prefer 'game' key if present
+            key = 'game' if 'game' in self.audio_loaders else next(iter(self.audio_loaders))
+            try:
+                self.audio_loaders[key].finalize()
+                self.audio_loaders[key].play()
+            except Exception:
+                pass
 
-    def finalize_and_play(self):
-        """Finalize audio on the main thread (initialize mixer and load) and start playback."""
-        if not self.audio_loader:
+    def finalize_and_play(self, key: Optional[str] = None):
+        """Finalize (on main thread) and play a named music track.
+
+        If multiple audio files were provided, `key` selects which one to
+        finalize and play. If `key` is None the method will prefer 'game'
+        if present, otherwise the first available loader. If only a single
+        `audio_loader` was configured (backwards compat), it will be used.
+        """
+        if self.audio_loader and not self.audio_loaders:
+            try:
+                self.audio_loader.finalize()
+            except Exception:
+                return
+            self.audio_loader.play()
+            return
+
+        if not self.audio_loaders:
+            return
+
+        # choose key
+        if key is None:
+            key = 'game' if 'game' in self.audio_loaders else next(iter(self.audio_loaders))
+
+        loader = self.audio_loaders.get(key)
+        if not loader:
             return
         try:
-            self.audio_loader.finalize()
+            loader.finalize()
+            loader.play()
         except Exception:
-            # if finalize fails, skip playback
             return
-        self.audio_loader.play()
 
     def stop_music(self):
-        if self.audio_loader:
-            self.audio_loader.stop()
+        # stopping is global for pygame.mixer.music
+        try:
+            if self.audio_loader or self.audio_loaders:
+                __import__('pygame').mixer.music.stop()
+        except Exception:
+            pass
 
 
 __all__ = ["ResourceManager"]

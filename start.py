@@ -39,8 +39,17 @@ class Application:
             # fallback/default tpose used by some scenes
             "default_tpose": os.path.abspath(os.path.join("assets", "photo", "tpose.png")),
         }
-        self.res_mgr = ResourceManager(
-            images=images, image_base_dir=None, audio_path=None)
+        # Provide absolute paths to background music files so ResourceManager
+        # can preload them. We include both the main game BGM and the
+        # fighting-scene BGM so scenes can request the appropriate track.
+        game_bgm = os.path.abspath(os.path.join('assets', 'sounds', 'game_bgm.mp3'))
+        fighting_bgm = os.path.abspath(os.path.join('assets', 'sounds', 'fighting scene_bgm.mp3'))
+        audio_files = {
+            'game': game_bgm,
+            'fighting': fighting_bgm,
+        }
+
+        self.res_mgr = ResourceManager(images=images, image_base_dir=None, audio_files=audio_files)
 
         self.running = True
         self.scene = None
