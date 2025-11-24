@@ -119,7 +119,7 @@ class AvatarCreateScene:
                 except Exception:
                     pass
 
-            music_path = os.path.join('assets', 'sounds', 'bgm.mp3')
+            music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
             if os.path.exists(music_path):
                 try:
                     pygame.mixer.music.load(music_path)
