@@ -90,9 +90,11 @@ class MenuScene:
             # If ResourceManager has preloaded audio loaders, prefer using it
             if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
                 try:
+                    print("MenuScene: playing music via ResourceManager")
                     # finalize & play the named 'game' track (will fall back inside RM if missing)
                     self.res_mgr.finalize_and_play('game')
                 except Exception:
+                    print("MenuScene: ResourceManager failed to play music, falling back to local mixer")
                     # fall back to direct mixer below
                     pass
             else:
