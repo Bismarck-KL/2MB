@@ -15,6 +15,7 @@ from utils.color import (
     CAPTURE_BASE,
     CAPTURE_HOVER,
 )
+from utils.loading import run_loading_with_callback
 from utils.ui import Button
 
 
@@ -31,6 +32,8 @@ class AvatarCreateScene:
         self.font = app.font
         self.title_font = app.title_font
         self.res_mgr = app.res_mgr
+
+        self.is_ready_to_next = False   
 
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
@@ -296,9 +299,73 @@ class AvatarCreateScene:
 
         # capture photo button click
         if self.capture_button.handle_event(event):
+
+            print("Capture button clicked")
             # start in-game capture mode
             self.capturing = True
-            try:
+
+            # open the loading screen and warm-up the camera in a worker thread
+            def _camera_warmup_loader(report, stop_event=None):
+                """Open the default camera, read a few frames to warm it up,
+                report progress (0..100), then release the camera.
+
+                This function runs in a background thread started by
+                `run_loading_with_callback` so it must be thread-safe and
+                respect `stop_event` if provided.
+                """
+                try:
+                    import time
+
+                    cap = cv2.VideoCapture(0)
+                    if not cap or not cap.isOpened():
+                        # nothing to warm; report completion
+                        try:
+                            report(100)
+                        except Exception:
+                            pass
+                        return
+
+                    # try to set a modest resolution for faster warm-up
+                    try:
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    except Exception:
+                        pass
+
+                    frames = 6
+                    for i in range(frames):
+                        if stop_event is not None and getattr(stop_event, "is_set", lambda: False)():
+                            break
+                        try:
+                            ret, _ = cap.read()
+                        except Exception:
+                            ret = False
+                        # small delay so the loading UI is visible
+                        time.sleep(0.06)
+                        try:
+                            report(int(((i + 1) / frames) * 100))
+                        except Exception:
+                            pass
+
+                    try:
+                        cap.release()
+                    except Exception:
+                        pass
+                except Exception:
+                    try:
+                        report(100)
+                    except Exception:
+                        pass
+
+            run_loading_with_callback(
+                surface=self.screen,
+                loader=_camera_warmup_loader,
+                on_complete=lambda: None,
+                title="Initializing Camera",
+                subtitle="Please wait...",
+            )
+            
+            try:                
                 self.cap = cv2.VideoCapture(0)
                 if not self.cap.isOpened():
                     print("Unable to open camera")
@@ -386,8 +453,10 @@ class AvatarCreateScene:
         # draw back button
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
-        # draw next button
-        self.next_button.draw(self.screen, mouse_pos)
+
+        # if slef.capture_countdown <0 $$ self.current_player ===2,draw next button
+        if self.is_ready_to_next:
+            self.next_button.draw(self.screen, mouse_pos)
 
         # draw capture photo button
         self.capture_button.draw(self.screen, mouse_pos)
@@ -442,6 +511,7 @@ class AvatarCreateScene:
                         note = "完成後會自動切換到 Player 2，請準備好下一位。"
                     else:
                         note = "已拍攝 Player 2，完成後會回到建立畫面。"
+                        self.is_ready_to_next = True
                     note_surf = self.font.render(note, True, (230, 230, 230))
                     note_shadow = self.font.render(note, True, (0,0,0))
                     n_x = 12
