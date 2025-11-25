@@ -12,6 +12,9 @@ class _MediapipeCapture:
         # store latest landmarks and a lock for thread-safe access
         self._latest_lock = threading.Lock()
         self._latest = None
+        # latest detected actions per player (player_id -> (action_str, ts))
+        self._actions_lock = threading.Lock()
+        self._actions = {0: (None, 0.0), 1: (None, 0.0)}
 
     def start(self):
         if self._running:
@@ -117,6 +120,19 @@ class _MediapipeCapture:
                     except Exception:
                         pass
 
+                    # overlay latest detected actions (if any)
+                    try:
+                        with self._actions_lock:
+                            a0, t0 = self._actions.get(0, (None, 0.0))
+                            a1, t1 = self._actions.get(1, (None, 0.0))
+                        now_ts = time.time()
+                        if a0 and (now_ts - t0) < 2.5:
+                            cv2.putText(frame, str(a0), (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 200, 255), 2)
+                        if a1 and (now_ts - t1) < 2.5:
+                            cv2.putText(frame, str(a1), (w - 240, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 200, 255), 2)
+                    except Exception:
+                        pass
+
                     cv2.imshow(window_name, frame)
                 except Exception as e:
                     # ignore imshow errors but log them for diagnosis
@@ -163,6 +179,20 @@ class _MediapipeCapture:
                 }
         except Exception:
             return None
+
+    def set_latest_action(self, player_id: int, action: str):
+        try:
+            with self._actions_lock:
+                self._actions[player_id] = (str(action).upper() if action else None, time.time())
+        except Exception:
+            pass
+
+    def get_latest_actions(self):
+        try:
+            with self._actions_lock:
+                return {k: (v[0], v[1]) for k, v in self._actions.items()}
+        except Exception:
+            return {0: (None, 0.0), 1: (None, 0.0)}
 
     def initialize(self, report, stop_event=None):
         """Synchronous initialization helper suitable as a loader callable.
@@ -233,3 +263,22 @@ def initialize_mediapipe(report, stop_event=None):
     It delegates to the singleton instance's `initialize` method.
     """
     return _instance.initialize(report, stop_event)
+
+
+def get_latest_landmarks():
+    return _instance.get_latest_landmarks()
+
+
+def set_latest_action(player_id: int, action: str):
+    """Set the latest detected action for a player (module-level helper)."""
+    try:
+        _instance.set_latest_action(player_id, action)
+    except Exception:
+        pass
+
+
+def get_latest_actions():
+    try:
+        return _instance.get_latest_actions()
+    except Exception:
+        return {0: (None, 0.0), 1: (None, 0.0)}
