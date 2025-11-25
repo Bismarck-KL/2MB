@@ -1,6 +1,7 @@
 import pygame
 import pygame.surfarray
 import os
+import time
 
 from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, HEALTH, HEALTH_BG
 from utils.ui import Button, draw_health_bar
@@ -14,6 +15,8 @@ try:
         initialize_mediapipe,
     )
     from utils.loading import run_loading_with_callback
+    # optional action detector (uses mediapipe directly)
+    from utils.action_detector import ActionDetector
 except Exception:
     # allow project to run even if opencv/mediapipe not available at import time
     def start_mediapipe_capture():
@@ -91,6 +94,12 @@ class GameScene:
         self.player_2 = Player(app, 1, image_key="player2",
                                use_animation=True,
                                animation_image="assets/photo/player2/tpose.png")
+
+        # create action detector but don't start it yet; we will start in on_enter
+        try:
+            self.action_detector = ActionDetector(self._on_player_action)
+        except Exception:
+            self.action_detector = None
         
         # 格鬥遊戲設定
         self.player_1.position = [300, 500]  # 左側起始位置
@@ -165,10 +174,22 @@ class GameScene:
         except Exception:
             pass
 
+        # start action detector (if available)
+        try:
+            if getattr(self, 'action_detector', None):
+                self.action_detector.start()
+        except Exception:
+            pass
+
     def on_exit(self):
         """Called when leaving the scene. Stop the mediapipe capture."""
         try:
             stop_mediapipe_capture()
+        except Exception:
+            pass
+        try:
+            if getattr(self, 'action_detector', None):
+                self.action_detector.stop()
         except Exception:
             pass
         # stop music when leaving the game scene (fade out)
@@ -179,20 +200,57 @@ class GameScene:
             pass
 
     def handle_event(self, event):
-        print(f'[DEBUG] GameScene.handle_event: event={event}, game_over={self.game_over}')
+        # print(f'[DEBUG] GameScene.handle_event: event={event}, game_over={self.game_over}')
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             print('[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene')
             self.app.change_scene("MenuScene")
 
         # back button click
         if self.back_button.handle_event(event):
-            print('[DEBUG] GameScene.handle_event: Back button clicked, switching to MenuScene')
+            # print('[DEBUG] GameScene.handle_event: Back button clicked, switching to MenuScene')
             self.app.change_scene("MenuScene")
         
         # 遊戲結束後按空白鍵重新開始
         if self.game_over and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            print('[DEBUG] GameScene.handle_event: SPACE pressed, restarting game')
+            # print('[DEBUG] GameScene.handle_event: SPACE pressed, restarting game')
             self.reset_game()
+
+    def _on_player_action(self, player_id: int, action: str):
+        """Callback from ActionDetector when an action is detected from camera.
+
+        Maps detected actions to in-game player actions (jump/punch/kick).
+        """
+        try:
+            if self.game_over:
+                return
+
+            player = self.player_1 if player_id == 0 else self.player_2
+            if player.is_hurt:
+                return
+
+            # map actions
+            if action == 'jump' and not player.is_jumping:
+                player.trigger_action('jump', 0.5)
+                player.velocity_y = self.jump_force
+                jump_dist = 25
+                if player.facing == 'right':
+                    player.position[0] += jump_dist
+                else:
+                    player.position[0] -= jump_dist
+
+            if action == 'punch' and getattr(player, 'attack_cooldown', 0) <= 0:
+                print(f"GameScene: camera detected punch by player {player_id}")
+                player.trigger_action('punch', 0.3)
+                player.attack_cooldown = 0.3
+                player.current_attack = 'punch'
+
+            if action == 'kick' and getattr(player, 'attack_cooldown', 0) <= 0:
+                print(f"GameScene: camera detected kick by player {player_id}")
+                player.trigger_action('kick', 0.3)
+                player.attack_cooldown = 0.3
+                player.current_attack = 'kick'
+        except Exception:
+            pass
 
     def update(self, dt):
         if self.game_over:

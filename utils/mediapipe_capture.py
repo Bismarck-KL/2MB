@@ -13,11 +13,19 @@ class _MediapipeCapture:
     def start(self):
         if self._running:
             return
+        try:
+            print(f"MediapipeCapture: starting camera thread (index={self.camera_index})")
+        except Exception:
+            pass
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     def stop(self):
+        try:
+            print("MediapipeCapture: stop requested")
+        except Exception:
+            pass
         self._running = False
         # give thread a moment to clean up
         if self._thread:
@@ -33,31 +41,82 @@ class _MediapipeCapture:
 
         mp_pose = mp.solutions.pose
         mp_drawing = mp.solutions.drawing_utils
-
         with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             window_name = 'Mediapipe Capture - press q to close'
+            # create a named, resizable window and start the window thread to
+            # improve the likelihood the preview appears reliably on Windows
+            try:
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                try:
+                    cv2.startWindowThread()
+                except Exception:
+                    # startWindowThread is a best-effort helper; ignore failures
+                    pass
+            except Exception:
+                # ignore if namedWindow is unsupported on this platform
+                pass
+
             while self._running and cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
+                    print("MediapipeCapture: frame read failed (ret=False), stopping capture")
                     break
 
                 # Convert BGR to RGB for mediapipe
-                img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = pose.process(img_rgb)
+                try:
+                    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                except Exception as e:
+                    print("MediapipeCapture: cvtColor failed:", e)
+                    # show the raw frame if possible and continue
+                    try:
+                        cv2.imshow(window_name, frame)
+                    except Exception:
+                        pass
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        self._running = False
+                        break
+                    continue
+
+                try:
+                    results = pose.process(img_rgb)
+                except Exception as e:
+                    # log and keep running; some mediapipe model issues show as warnings
+                    print("MediapipeCapture: pose.process() raised:", repr(e))
+                    results = None
 
                 # Draw landmarks on the original BGR frame
-                if results.pose_landmarks:
-                    mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                try:
+                    if results and getattr(results, 'pose_landmarks', None):
+                        mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                except Exception as e:
+                    print("MediapipeCapture: drawing landmarks failed:", e)
 
-                cv2.imshow(window_name, frame)
+                try:
+                    cv2.imshow(window_name, frame)
+                except Exception as e:
+                    # ignore imshow errors but log them for diagnosis
+                    print("MediapipeCapture: imshow failed:", e)
+
                 # allow quick manual quit from this window
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                try:
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        self._running = False
+                        break
+                except Exception:
+                    # if waitKey fails, break to avoid tight loop
                     self._running = False
                     break
 
             cap.release()
             try:
                 cv2.destroyWindow(window_name)
+            except Exception:
+                try:
+                    cv2.destroyAllWindows()
+                except Exception:
+                    pass
+            try:
+                print("MediapipeCapture: capture loop exited")
             except Exception:
                 pass
 
