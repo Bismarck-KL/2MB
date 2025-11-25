@@ -16,6 +16,7 @@ import threading
 import time
 from typing import Callable, Optional, Tuple
 import cv2
+import math
 try:
     import mediapipe as mp
 except Exception:
@@ -53,6 +54,13 @@ class ActionDetector:
         self.kick_height_threshold = 0.10  # ankle above hip (normalized)
         self.jump_height_threshold = 0.12  # hip y decrease from baseline
         self.cooldown_seconds = 0.6
+        # block detection thresholds
+        self.block_wrist_dist_threshold = 0.08
+        self.block_chest_y_thresh = 0.16
+        # elbow extension threshold (dot product) for punch validation
+        # when elbow is near fully extended the vectors shoulder->elbow and wrist->elbow
+        # point roughly opposite so the dot product normalized is near -1.0
+        self.elbow_extension_cos_threshold = -0.8
 
         # baseline hip y for jump detection (per player)
         self._hip_baseline = {0: None, 1: None}
@@ -115,6 +123,8 @@ class ActionDetector:
                     right_shoulder = L(mp_pose.PoseLandmark.RIGHT_SHOULDER.value)
                     left_wrist = L(mp_pose.PoseLandmark.LEFT_WRIST.value)
                     right_wrist = L(mp_pose.PoseLandmark.RIGHT_WRIST.value)
+                    left_elbow = L(mp_pose.PoseLandmark.LEFT_ELBOW.value)
+                    right_elbow = L(mp_pose.PoseLandmark.RIGHT_ELBOW.value)
                     left_hip = L(mp_pose.PoseLandmark.LEFT_HIP.value)
                     right_hip = L(mp_pose.PoseLandmark.RIGHT_HIP.value)
                     left_ankle = L(mp_pose.PoseLandmark.LEFT_ANKLE.value)
@@ -182,6 +192,32 @@ class ActionDetector:
                             pass
                         time.sleep(0.01)
                         continue
+
+                    # BLOCK detection: wrists close together near chest area
+                    try:
+                        lw = left_wrist
+                        rw = right_wrist
+                        ls = left_shoulder
+                        rs = right_shoulder
+                        if lw and rw and ls and rs:
+                            dist = math.hypot(lw[0] - rw[0], lw[1] - rw[1])
+                            shoulder_y = 0.5 * (ls[1] + rs[1])
+                            wrist_y_avg = 0.5 * (lw[1] + rw[1])
+                            if dist < self.block_wrist_dist_threshold and abs(wrist_y_avg - shoulder_y) < self.block_chest_y_thresh:
+                                self._cooldown_until[player_id] = now + self.cooldown_seconds
+                                try:
+                                    self.callback(player_id, 'block')
+                                    try:
+                                        if mc and hasattr(mc, 'set_latest_action'):
+                                            mc.set_latest_action(player_id, 'BLOCK')
+                                    except Exception:
+                                        pass
+                                except Exception:
+                                    pass
+                                time.sleep(0.01)
+                                continue
+                    except Exception:
+                        pass
 
                     # kick detection: ankle higher (smaller y) than hip by threshold
                     if ankle and hip:
@@ -256,6 +292,8 @@ class ActionDetector:
                         right_shoulder = L(mp_pose.PoseLandmark.RIGHT_SHOULDER.value)
                         left_wrist = L(mp_pose.PoseLandmark.LEFT_WRIST.value)
                         right_wrist = L(mp_pose.PoseLandmark.RIGHT_WRIST.value)
+                        left_elbow = L(mp_pose.PoseLandmark.LEFT_ELBOW.value)
+                        right_elbow = L(mp_pose.PoseLandmark.RIGHT_ELBOW.value)
                         left_hip = L(mp_pose.PoseLandmark.LEFT_HIP.value)
                         right_hip = L(mp_pose.PoseLandmark.RIGHT_HIP.value)
                         left_ankle = L(mp_pose.PoseLandmark.LEFT_ANKLE.value)
@@ -302,19 +340,76 @@ class ActionDetector:
                         if now < self._cooldown_until[player_id]:
                             continue
 
+                        # BLOCK detection: wrists close together near chest area
+                        try:
+                            lw = left_wrist
+                            rw = right_wrist
+                            ls = left_shoulder
+                            rs = right_shoulder
+                            if lw and rw and ls and rs:
+                                dist = math.hypot(lw[0] - rw[0], lw[1] - rw[1])
+                                shoulder_y = 0.5 * (ls[1] + rs[1])
+                                wrist_y_avg = 0.5 * (lw[1] + rw[1])
+                                if dist < self.block_wrist_dist_threshold and abs(wrist_y_avg - shoulder_y) < self.block_chest_y_thresh:
+                                    self._cooldown_until[player_id] = now + self.cooldown_seconds
+                                    try:
+                                        self.callback(player_id, 'block')
+                                        try:
+                                            if mc and hasattr(mc, 'set_latest_action'):
+                                                mc.set_latest_action(player_id, 'BLOCK')
+                                        except Exception:
+                                            pass
+                                    except Exception:
+                                        pass
+                                    continue
+                        except Exception:
+                            pass
+
                         # punch detection: wrist moving quickly outward and displaced past shoulder
                         punch_disp = None
                         if wrist and shoulder:
                             punch_disp = (wrist[0] - shoulder[0]) * facing_dir
 
                         if punch_disp is not None and punch_disp > self.punch_disp_threshold and vel_x * facing_dir > self.punch_vel_threshold:
-                            # detected punch
-                            self._cooldown_until[player_id] = now + self.cooldown_seconds
+                            # validate with elbow extension (reduce false positives)
                             try:
-                                self.callback(player_id, 'punch')
+                                elbow = left_elbow if player_id == 0 else right_elbow
+                                shoulder_pt = left_shoulder if player_id == 0 else right_shoulder
+                                wrist_pt = left_wrist if player_id == 0 else right_wrist
+                                extended_ok = True
+                                if elbow and shoulder_pt and wrist_pt:
+                                    ax = shoulder_pt[0] - elbow[0]
+                                    ay = shoulder_pt[1] - elbow[1]
+                                    bx = wrist_pt[0] - elbow[0]
+                                    by = wrist_pt[1] - elbow[1]
+                                    na = math.hypot(ax, ay)
+                                    nb = math.hypot(bx, by)
+                                    if na > 1e-6 and nb > 1e-6:
+                                        dot = (ax * bx + ay * by) / (na * nb)
+                                        extended_ok = (dot < self.elbow_extension_cos_threshold)
+                                if not extended_ok:
+                                    continue
+
+                                # detected punch
+                                self._cooldown_until[player_id] = now + self.cooldown_seconds
+                                try:
+                                    self.callback(player_id, 'punch')
+                                    try:
+                                        if mc and hasattr(mc, 'set_latest_action'):
+                                            mc.set_latest_action(player_id, 'PUNCH')
+                                    except Exception:
+                                        pass
+                                except Exception:
+                                    pass
+                                continue
                             except Exception:
-                                pass
-                            continue
+                                # fallback: still report punch
+                                try:
+                                    self._cooldown_until[player_id] = now + self.cooldown_seconds
+                                    self.callback(player_id, 'punch')
+                                except Exception:
+                                    pass
+                                continue
 
                         # kick detection: ankle higher (smaller y) than hip by threshold
                         if ankle and hip:
