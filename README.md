@@ -1,6 +1,11 @@
 # 2D Character Animation System
 
-Pygame-based 2D skeletal animation system with real-time pixel art effects and dynamic pose switching.
+Step in! and the game fights as you!
+•	Snap one full body photo—instantly become your own pixel fighter.
+•	Your body is the controller
+•	Fixed tempo moves for solid feel
+•	Drain their health bar to win. The cleaner your moves, the better the detection.
+•	After calibration, take your left/right spot—countdown… fight!
 
 ## Features
 
