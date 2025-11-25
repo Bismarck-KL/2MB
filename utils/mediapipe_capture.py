@@ -9,6 +9,9 @@ class _MediapipeCapture:
         self.camera_index = camera_index
         self._running = False
         self._thread = None
+        # store latest landmarks and a lock for thread-safe access
+        self._latest_lock = threading.Lock()
+        self._latest = None
 
     def start(self):
         if self._running:
@@ -84,14 +87,36 @@ class _MediapipeCapture:
                     print("MediapipeCapture: pose.process() raised:", repr(e))
                     results = None
 
-                # Draw landmarks on the original BGR frame
+                # Draw landmarks on the original BGR frame and store them
                 try:
                     if results and getattr(results, 'pose_landmarks', None):
                         mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                        try:
+                            lm = []
+                            for l in results.pose_landmarks.landmark:
+                                lm.append((l.x, l.y))
+                            with self._latest_lock:
+                                self._latest = {
+                                    'landmarks': lm,
+                                    'width': frame.shape[1],
+                                    'height': frame.shape[0],
+                                    'ts': time.time(),
+                                }
+                        except Exception:
+                            pass
                 except Exception as e:
                     print("MediapipeCapture: drawing landmarks failed:", e)
 
                 try:
+                    # draw a vertical divider and labels for left/right halves
+                    try:
+                        h, w = frame.shape[0], frame.shape[1]
+                        cv2.line(frame, (w // 2, 0), (w // 2, h), (100, 100, 100), 2)
+                        cv2.putText(frame, 'P1', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                        cv2.putText(frame, 'P2', (w - 70, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                    except Exception:
+                        pass
+
                     cv2.imshow(window_name, frame)
                 except Exception as e:
                     # ignore imshow errors but log them for diagnosis
@@ -119,6 +144,25 @@ class _MediapipeCapture:
                 print("MediapipeCapture: capture loop exited")
             except Exception:
                 pass
+
+    def get_latest_landmarks(self):
+        """Return a copy of the latest landmarks dict or None.
+
+        The structure is: {'landmarks': [(x,y),...], 'width':int, 'height':int, 'ts': float}
+        Coordinates are normalized (0..1)."""
+        try:
+            with self._latest_lock:
+                if self._latest is None:
+                    return None
+                # shallow copy is sufficient (list of tuples)
+                return {
+                    'landmarks': list(self._latest['landmarks']),
+                    'width': self._latest['width'],
+                    'height': self._latest['height'],
+                    'ts': self._latest['ts'],
+                }
+        except Exception:
+            return None
 
     def initialize(self, report, stop_event=None):
         """Synchronous initialization helper suitable as a loader callable.

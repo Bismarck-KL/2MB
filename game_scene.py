@@ -53,6 +53,13 @@ except Exception:
             except Exception:
                 pass
 
+    # ensure `mc` is importable at module level for rendering landmarks
+try:
+    import utils.mediapipe_capture as mc
+except Exception:
+    mc = None
+
+
 
 class GameScene:
     """Fighting game scene with 2-player combat."""
@@ -100,6 +107,10 @@ class GameScene:
             self.action_detector = ActionDetector(self._on_player_action)
         except Exception:
             self.action_detector = None
+
+        # per-player detected action state (updated by ActionDetector callback)
+        self.detected_actions = {0: None, 1: None}
+        self._action_expiry = {0: 0.0, 1: 0.0}
         
         # 格鬥遊戲設定
         self.player_1.position = [300, 500]  # 左側起始位置
@@ -174,6 +185,43 @@ class GameScene:
         except Exception:
             pass
 
+        # start action detector if available (separate camera loop that detects actions)
+        try:
+            if self.action_detector:
+                self.action_detector.start()
+        except Exception:
+            pass
+        
+        # draw latest mediapipe landmarks (if available) into a small preview
+        try:
+            if mc:
+                latest = mc.get_latest_landmarks()
+                if latest and latest.get('landmarks'):
+                    lm = latest['landmarks']
+                    # preview rectangle on left side below HUD
+                    pv_w, pv_h = 360, 270
+                    pv_x, pv_y = 40, 140
+                    pv_rect = pygame.Rect(pv_x, pv_y, pv_w, pv_h)
+                    # translucent background
+                    pv_surf = pygame.Surface((pv_w, pv_h))
+                    pv_surf.set_alpha(200)
+                    pv_surf.fill((8, 8, 12))
+                    self.screen.blit(pv_surf, (pv_x, pv_y))
+
+                    # draw landmarks (normalized coordinates)
+                    for nx, ny in lm:
+                        try:
+                            x = pv_x + int(nx * pv_w)
+                            y = pv_y + int(ny * pv_h)
+                            pygame.draw.circle(self.screen, (0, 200, 0), (x, y), 3)
+                        except Exception:
+                            continue
+
+                    # label
+                    lbl = self.font.render("Camera Preview", True, (200, 200, 200))
+                    self.screen.blit(lbl, (pv_x + 6, pv_y - 30))
+        except Exception:
+            pass
         # start action detector (if available)
         try:
             if getattr(self, 'action_detector', None):
@@ -196,6 +244,37 @@ class GameScene:
         try:
             if pygame.mixer.get_init():
                 pygame.mixer.music.fadeout(500)
+        except Exception:
+            pass
+
+        # stop action detector
+        try:
+            if self.action_detector:
+                self.action_detector.stop()
+        except Exception:
+            pass
+
+    def _on_player_action(self, player_id: int, action_name: str):
+        """Callback from ActionDetector running in background thread.
+
+        We record the detected action and set an expiry so it shows briefly in HUD.
+        Also trigger a local player action if applicable.
+        """
+        try:
+            now = time.time()
+            if player_id in (0, 1):
+                self.detected_actions[player_id] = action_name.upper()
+                self._action_expiry[player_id] = now + 1.0  # show for 1s
+                # map to player triggers for animations
+                try:
+                    if action_name == 'punch':
+                        self.player_1.trigger_action('punch', 0.3) if player_id == 0 else self.player_2.trigger_action('punch', 0.3)
+                    elif action_name == 'kick':
+                        self.player_1.trigger_action('kick', 0.3) if player_id == 0 else self.player_2.trigger_action('kick', 0.3)
+                    elif action_name == 'jump':
+                        self.player_1.trigger_action('jump', 0.5) if player_id == 0 else self.player_2.trigger_action('jump', 0.5)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -502,6 +581,24 @@ class GameScene:
         # draw players
         self.player_1.draw(self.screen)
         self.player_2.draw(self.screen)
+
+        # draw detected actions above each player if recently detected
+        try:
+            now = time.time()
+            for pid, player in ((0, self.player_1), (1, self.player_2)):
+                action = self.detected_actions.get(pid)
+                expiry = self._action_expiry.get(pid, 0)
+                if action and now < expiry:
+                    # render above player rect
+                    txt = self.font.render(action, True, (255, 200, 50))
+                    txt_rect = txt.get_rect(center=(int(player.pos.x), int(player.pos.y) - player.size[1] // 2 - 20))
+                    # background box
+                    box = pygame.Rect(txt_rect.x - 6, txt_rect.y - 4, txt_rect.width + 12, txt_rect.height + 8)
+                    pygame.draw.rect(self.screen, (20, 20, 20), box)
+                    pygame.draw.rect(self.screen, (120, 120, 120), box, 2)
+                    self.screen.blit(txt, txt_rect)
+        except Exception:
+            pass
 
         # draw HUD
         try:
