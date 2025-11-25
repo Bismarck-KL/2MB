@@ -297,7 +297,7 @@ class GameScene:
     def _on_player_action(self, player_id: int, action: str):
         """Callback from ActionDetector when an action is detected from camera.
 
-        Maps detected actions to in-game player actions (jump/punch/kick).
+        Maps detected actions to in-game player actions (jump/punch/kick/block).
         """
         try:
             if self.game_over:
@@ -318,16 +318,23 @@ class GameScene:
                     player.position[0] -= jump_dist
 
             if action == 'punch' and getattr(player, 'attack_cooldown', 0) <= 0:
-                print(f"GameScene: camera detected punch by player {player_id}")
+                # print(f"GameScene: camera detected punch by player {player_id}")
                 player.trigger_action('punch', 0.3)
                 player.attack_cooldown = 0.3
                 player.current_attack = 'punch'
 
             if action == 'kick' and getattr(player, 'attack_cooldown', 0) <= 0:
-                print(f"GameScene: camera detected kick by player {player_id}")
+                # print(f"GameScene: camera detected kick by player {player_id}")
                 player.trigger_action('kick', 0.3)
                 player.attack_cooldown = 0.3
                 player.current_attack = 'kick'
+            
+            if action == 'block':
+                player.is_blocking = True
+                player.trigger_action('block', 0.5)
+            else:
+                player.is_blocking = False
+
         except Exception:
             pass
 
