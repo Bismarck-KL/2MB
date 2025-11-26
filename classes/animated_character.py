@@ -4,7 +4,6 @@ Integrates the skeletal animation system into the 2MB game
 """
 
 import pygame
-import os
 from collections import Counter
 import weakref
 
