@@ -83,6 +83,11 @@ class GameScene:
             self.title_font = app.title_font
         self.res_mgr = app.res_mgr
 
+        try:
+            back_img = self.res_mgr.get_image("btn_back")
+        except Exception:
+            back_img = None
+
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
         self.back_button = Button(
@@ -91,6 +96,7 @@ class GameScene:
             font=self.font,
             base_color=QUIT_BASE,
             hover_color=QUIT_HOVER,
+            image=back_img,
         )
 
         # Player entities with animation system
