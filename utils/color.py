@@ -23,6 +23,10 @@ QUIT_HOVER = (220, 70, 70)
 NEXT_BASE = (30, 144, 255)  # dodgerblue
 NEXT_HOVER = (65, 150, 255) 
 
+# Previous button
+PREV_BASE = (200, 40, 40)
+PREV_HOVER = (220, 70, 70)
+
 # Capture button (Avatar Create)
 # slightly lighter blue for capture action and a darker hover
 CAPTURE_BASE = (120, 180, 255)
@@ -51,6 +55,8 @@ COLORS = {
     "quit_hover": QUIT_HOVER,
     "next_base": NEXT_BASE,
     "next_hover": NEXT_HOVER,
+    "prev_base": PREV_BASE,
+    "prev_hover": PREV_HOVER,
     "status": STATUS,
     "health": HEALTH,
     "health_bg": HEALTH_BG,
@@ -73,6 +79,8 @@ __all__ = [
     "QUIT_HOVER",
     "NEXT_BASE",
     "NEXT_HOVER",
+    "PREV_BASE",
+    "PREV_HOVER",
     "STATUS",
     "HEALTH",
     "HEALTH_BG",
