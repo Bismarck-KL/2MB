@@ -16,12 +16,10 @@ class TutorialScene:
 
         # TO-DO(Qianrina): update the button layout, size and positions
         # button layout
-        btn_w, btn_h = 260, 96
-        center_x = app.WIDTH // 2
-        center_y = app.HEIGHT // 2
-
-        self.start_rect = pygame.Rect(center_x - btn_w - 20, center_y, btn_w, btn_h)
-        self.back_rect = pygame.Rect(20, 20, 140, 48)
+        start_btn_w, start_btn_h = 140, 48
+        back_btn_w, back_btn_h = 140, 48
+        self.start_rect = pygame.Rect(app.WIDTH - start_btn_w - 20, 20, start_btn_w, start_btn_h)
+        self.back_rect = pygame.Rect(20, 20, back_btn_w, back_btn_h)
 
        
         # create Button components (images will be used if available)
@@ -44,7 +42,7 @@ class TutorialScene:
             hover_color=START_HOVER,
             image=start_img,
         )
-        self.quit_button  = Button(
+        self.back_button  = Button(
             self.back_rect,
             text="Back",
             font=self.font,
@@ -59,7 +57,7 @@ class TutorialScene:
         if self.start_button.handle_event(event):
             # switch to Game scene when Start is clicked
             self.app.change_scene("GameScene")
-        if self.quit_button.handle_event(event):
+        if self.back_button.handle_event(event):
             self.app.change_scene("MenuScene")
     def on_enter(self):
         # play menu background music (prefer ResourceManager if available)
@@ -129,7 +127,8 @@ class TutorialScene:
         self.screen.blit(title_surf, title_rect)
 
         mouse_pos = pygame.mouse.get_pos()
-        self.quit_button.draw(self.screen, mouse_pos)
+        self.back_button.draw(self.screen, mouse_pos)
+        self.start_button.draw(self.screen, mouse_pos)
 
 
 
