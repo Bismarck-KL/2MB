@@ -11,6 +11,7 @@ from menu_scene import MenuScene
 from game_scene import GameScene
 from avatar_create import AvatarCreateScene
 from pose_editor_scene import PoseEditorScene
+from tutorial_scene import TutorialScene
 
 
 class Application:
@@ -59,6 +60,7 @@ class Application:
             "GameScene": GameScene,
             "AvatarCreateScene": AvatarCreateScene,
             "PoseEditorScene": PoseEditorScene,
+            "TutorialScene": TutorialScene,
         }
 
     def change_scene(self, scene_name: str):
