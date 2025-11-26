@@ -80,7 +80,7 @@ class MenuScene:
             self.app.running = False
         if self.dev_game_button.handle_event(event):
             # switch to Game scene when Dev Game is clicked
-            self.app.change_scene("GameScene")
+            self.app.change_scene("TutorialScene")
         if self.pose_editor_button.handle_event(event):
             self.app.change_scene("PoseEditorScene")
 
