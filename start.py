@@ -34,11 +34,20 @@ class Application:
             "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.jpg")),
             "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
             "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),
+            "btn_back": os.path.abspath(os.path.join("assets", "images", "button_back.png")),
+            "but_next": os.path.abspath(os.path.join("assets", "images", "button_next.png")),
+            "button_prev": os.path.abspath(os.path.join("assets", "images", "button_prev.png")),
             # guides for capture UI (optional files under each player folder)
             "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
             "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),
             # fallback/default tpose used by some scenes
             "default_tpose": os.path.abspath(os.path.join("assets", "photo", "tpose.png")),
+            # Tutorial images
+            "tutorial_jump": os.path.abspath(os.path.join("assets", "images","tutorial", "jump.gif")),
+            "tutorial_punch": os.path.abspath(os.path.join("assets", "images","tutorial", "punch.gif")),
+            "tutorial_kick": os.path.abspath(os.path.join("assets", "images","tutorial", "kick.gif")),
+            "tutorial_block": os.path.abspath(os.path.join("assets", "images","tutorial", "block.gif")),
+
         }
         # Provide absolute paths to background music files so ResourceManager
         # can preload them. We include both the main game BGM and the
