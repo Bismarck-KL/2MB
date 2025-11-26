@@ -1,8 +1,9 @@
 import pygame
 import os
 
-from utils.color import BG, TITLE,START_BASE,START_HOVER, QUIT_BASE, QUIT_HOVER
+from utils.color import BG, TITLE,START_BASE,START_HOVER, QUIT_BASE, QUIT_HOVER,NEXT_BASE,NEXT_HOVER,PREV_BASE,PREV_HOVER
 from utils.ui import Button
+from utils.gif_player import GifPlayer
 
 
 class TutorialScene:
@@ -18,10 +19,18 @@ class TutorialScene:
         # button layout
         start_btn_w, start_btn_h = 140, 48
         back_btn_w, back_btn_h = 140, 48
+        next_btn_w, next_btn_h = 140, 48
+        prev_btn_w, prev_btn_h = 140, 48
+
         self.start_rect = pygame.Rect(app.WIDTH - start_btn_w - 20, 20, start_btn_w, start_btn_h)
         self.back_rect = pygame.Rect(20, 20, back_btn_w, back_btn_h)
 
+        # bottom left and right for prev/next (if needed in future)
+        self.prev_rect = pygame.Rect(20, app.HEIGHT - prev_btn_h - 20, prev_btn_w, prev_btn_h)
+        self.next_rect = pygame.Rect(app.WIDTH - next_btn_w - 20, app.HEIGHT - next_btn_h - 20, next_btn_w, next_btn_h)
+        
        
+
         # create Button components (images will be used if available)
         # get images defensively (loader may have set None for missing files)
         try:
@@ -32,7 +41,14 @@ class TutorialScene:
             back_img = self.res_mgr.get_image("btn_back")
         except Exception:
             back_img = None
-
+        try:         
+            next_img = self.res_mgr.get_image("btn_next")
+        except Exception:
+            next_img = None
+        try:
+            prev_img = self.res_mgr.get_image("btn_prev")
+        except Exception:
+            prev_img = None
 
         self.start_button = Button(
             self.start_rect,
@@ -50,6 +66,58 @@ class TutorialScene:
             hover_color=QUIT_HOVER,
             image=back_img,
         )
+        self.next_button  = Button(
+            self.next_rect, 
+            text="Next",
+            font=self.font,
+            base_color=NEXT_BASE,
+            hover_color=NEXT_HOVER,
+            image=next_img,
+        )
+        self.prev_button  = Button(
+            self.prev_rect,
+            text="Prev",
+            font=self.font, 
+            base_color=PREV_BASE,
+            hover_color=PREV_HOVER,
+            image=prev_img,
+        )
+
+        # Load tutorial assets. If an asset is a GIF file we create a GifPlayer
+        # instance which will produce animated frames; otherwise we use the
+        # already-loaded pygame.Surface returned by ResourceManager.
+        def _load_asset(key):
+            # prefer the raw mapped path so we can detect GIFs
+            path = None
+            try:
+                path = self.res_mgr.images_map.get(key)
+            except Exception:
+                path = None
+
+            if path and isinstance(path, str) and path.lower().endswith('.gif'):
+                try:
+                    gp = GifPlayer(path)
+                    if gp.is_valid():
+                        return gp
+                except Exception:
+                    # fall back to static surface
+                    pass
+
+            # default: return static surface (may be None)
+            try:
+                return self.res_mgr.get_image(key)
+            except Exception:
+                return None
+
+        self.tutorial_images = {
+            "jump": _load_asset("tutorial_jump"),
+            "punch": _load_asset("tutorial_punch"),
+            "kick": _load_asset("tutorial_kick"),
+            "block": _load_asset("tutorial_block"),
+        }
+        self.current_tutorial = "jump"
+        self.current_tutorial_image = self.tutorial_images.get(self.current_tutorial)
+        
 
         self.started = False
 
@@ -59,6 +127,25 @@ class TutorialScene:
             self.app.change_scene("GameScene")
         if self.back_button.handle_event(event):
             self.app.change_scene("MenuScene")
+        if self.next_button.handle_event(event):
+            # switch to next tutorial image
+            keys = list(self.tutorial_images.keys())
+            try:
+                idx = keys.index(self.current_tutorial)
+                idx = (idx + 1) % len(keys)
+                self.current_tutorial = keys[idx]
+            except Exception:
+                self.current_tutorial = keys[0]
+        if self.prev_button.handle_event(event):
+            # switch to previous tutorial image
+            keys = list(self.tutorial_images.keys())
+            try:
+                idx = keys.index(self.current_tutorial)
+                idx = (idx - 1) % len(keys)
+                self.current_tutorial = keys[idx]
+            except Exception:
+                self.current_tutorial = keys[0]
+
     def on_enter(self):
         # play menu background music (prefer ResourceManager if available)
         try:
@@ -97,6 +184,22 @@ class TutorialScene:
         except Exception:
             pass
 
+        # Ensure tutorial GIFs start from the beginning and play when entering the scene
+        try:
+            for val in self.tutorial_images.values():
+                if hasattr(val, 'reset'):
+                    try:
+                        val.reset()
+                    except Exception:
+                        pass
+                if hasattr(val, 'play'):
+                    try:
+                        val.play()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
     def on_exit(self):
         try:
             if pygame.mixer.get_init():
@@ -105,7 +208,16 @@ class TutorialScene:
             pass
 
     def update(self, dt):
-        pass
+        # advance GIF players if present
+        try:
+            val = self.tutorial_images.get(self.current_tutorial)
+            if hasattr(val, 'update'):
+                try:
+                    val.update(dt)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def render(self):
         # draw background image or color
@@ -121,14 +233,49 @@ class TutorialScene:
             # fallback: plain background color
             self.screen.fill(BG)
 
+        # draw current tutorial image in center
+        try:
+            val = self.tutorial_images.get(self.current_tutorial)
+            img = None
+            # GifPlayer exposes get_surface(); static surfaces are blitted directly
+            if val is None:
+                img = None
+            elif hasattr(val, 'get_surface'):
+                try:
+                    img = val.get_surface()
+                except Exception:
+                    img = None
+            else:
+                img = val
+
+            if img:
+                img_rect = img.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
+                self.screen.blit(img, img_rect)
+        except Exception:
+            # if anything goes wrong drawing the tutorial image, ignore and continue
+            pass
+        
+
         # title
         title_surf = self.title_font.render("Tutorial", True, TITLE)
         title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, 70))
         self.screen.blit(title_surf, title_rect)
 
+        # show the name of current tutorial
+        try:
+            tutorial_name = self.current_tutorial.capitalize()
+            tutorial_surf = self.font.render(f"{tutorial_name}", True, TITLE)
+            tutorial_rect = tutorial_surf.get_rect(center=(self.app.WIDTH // 2, 120))
+            self.screen.blit(tutorial_surf, tutorial_rect)
+        except Exception:
+            pass
+
         mouse_pos = pygame.mouse.get_pos()
         self.back_button.draw(self.screen, mouse_pos)
         self.start_button.draw(self.screen, mouse_pos)
+        self.next_button.draw(self.screen, mouse_pos)
+        self.prev_button.draw(self.screen, mouse_pos)
+
 
 
 
