@@ -2,6 +2,7 @@ import os
 from typing import List, Optional
 
 import pygame
+import numpy as np
 
 
 class GifPlayer:
@@ -72,7 +73,22 @@ class GifPlayer:
 
                 h, w = img.shape[:2]
                 surf = pygame.image.frombuffer(img.tobytes(), (w, h), "RGB")
-                frames.append(surf.copy())
+                # Convert near-green pixels to smooth alpha for cleaner
+                # compositing over the game UI. We prefer per-pixel alpha via
+                # numpy/surfarray; fall back to a simple colorkey if needed.
+                try:
+                    surf = surf.copy()
+                    surf = _apply_green_screen_alpha(surf)
+                except Exception:
+                    try:
+                        try:
+                            surf = surf.convert_alpha()
+                        except Exception:
+                            surf = surf.convert()
+                        surf.set_colorkey((0, 255, 0))
+                    except Exception:
+                        pass
+                frames.append(surf)
 
             cap.release()
 
@@ -93,6 +109,14 @@ class GifPlayer:
                 surf = surf.convert_alpha()
             except Exception:
                 surf = surf.convert()
+            # Convert near-green to alpha for smoother edges.
+            try:
+                surf = _apply_green_screen_alpha(surf)
+            except Exception:
+                try:
+                    surf.set_colorkey((0, 255, 0))
+                except Exception:
+                    pass
             self.frames = [surf]
             self.frame_count = 1
             self.durations = [1.0 / default_fps]
@@ -140,3 +164,69 @@ class GifPlayer:
 
 
 __all__ = ["GifPlayer"]
+
+
+def _apply_green_screen_alpha(surf: pygame.Surface, threshold: int = 60, falloff: int = 100) -> pygame.Surface:
+    """Convert near-green pixels on *surf* to per-pixel alpha.
+
+    - *threshold* is the minimum (G - max(R,B)) to start fading.
+    - *falloff* is the range over which alpha fades to 0 (fully transparent).
+
+    Uses `pygame.surfarray` + numpy for speed; falls back to a per-pixel loop
+    if surfarray access isn't available.
+    """
+    try:
+        try:
+            surf = surf.convert_alpha()
+        except Exception:
+            # If convert_alpha fails (no display), keep original
+            pass
+
+        arr = pygame.surfarray.pixels3d(surf)  # shape: (w, h, 3)
+        alpha = pygame.surfarray.pixels_alpha(surf)  # shape: (w, h)
+
+        # Ensure numpy arrays and use signed ints to avoid underflow
+        r = arr[:, :, 0].astype(np.int16)
+        g = arr[:, :, 1].astype(np.int16)
+        b = arr[:, :, 2].astype(np.int16)
+
+        diff = g - np.maximum(r, b)
+
+        # Start fully opaque
+        a = np.full(diff.shape, 255, dtype=np.uint8)
+
+        # Compute mask where green dominance exceeds threshold
+        mask = diff > threshold
+        if mask.any():
+            scaled = (diff.astype(np.float32) - float(threshold)) / float(falloff)
+            scaled = np.clip(scaled, 0.0, 1.0)
+            new_alpha = (255.0 * (1.0 - scaled)).astype(np.uint8)
+            a[mask] = new_alpha[mask]
+
+        # Write back into surface alpha
+        alpha[:, :] = a
+
+        # delete views so pygame unlocks the surface
+        del arr
+        del alpha
+        return surf
+    except Exception:
+        # Fallback: slower per-pixel approach
+        try:
+            w, h = surf.get_size()
+            try:
+                surf = surf.convert_alpha()
+            except Exception:
+                pass
+            for x in range(w):
+                for y in range(h):
+                    r, g, b, a = surf.get_at((x, y))
+                    diff = g - max(r, b)
+                    if diff <= threshold:
+                        continue
+                    scaled = min(max((diff - threshold) / float(falloff), 0.0), 1.0)
+                    new_a = int(255 * (1.0 - scaled))
+                    surf.set_at((x, y), (r, g, b, new_a))
+        except Exception:
+            pass
+        return surf
