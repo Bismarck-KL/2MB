@@ -24,7 +24,6 @@ class BackgroundMusicLoader:
     """
 
     def __init__(self, path: Optional[str] = None, volume: float = 0.5, init_mixer: bool = False):
-        # TO-DO: unpdate the bgm
         self.path = path or os.path.join('assets', 'sounds', 'bgm.mp3')
         self.volume = float(volume)
         # init_mixer controls whether finalize() will call pygame.mixer.init();
