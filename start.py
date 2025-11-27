@@ -26,9 +26,11 @@ class Application:
         self.font = pygame.font.SysFont(None, 48)
         self.title_font = pygame.font.SysFont(None, 72)
 
-    # TO-DO(Qianrina): upload the resources with correct paths
+    
         # resources
         images = {
+            
+            # TO-DO(Qianrina): upload the resources with correct paths
             "background": os.path.abspath(os.path.join("assets", "images", "background.jpg")),
             "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.jpg")),
             "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.jpg")),
@@ -37,9 +39,11 @@ class Application:
             "btn_back": os.path.abspath(os.path.join("assets", "images", "button_back.png")),
             "but_next": os.path.abspath(os.path.join("assets", "images", "button_next.png")),
             "button_prev": os.path.abspath(os.path.join("assets", "images", "button_prev.png")),
+            #####
+            
             # guides for capture UI (optional files under each player folder)
-            "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
-            "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),
+            # "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
+            # "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),
             # fallback/default tpose used by some scenes
             "default_tpose": os.path.abspath(os.path.join("assets", "photo", "tpose.png")),
             # Tutorial images
