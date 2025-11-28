@@ -17,17 +17,17 @@ class TutorialScene:
 
         # TO-DO(Qianrina): update the button layout, size and positions
         # button layout
-        start_btn_w, start_btn_h = 140, 48
-        back_btn_w, back_btn_h = 140, 48
-        next_btn_w, next_btn_h = 140, 48
-        prev_btn_w, prev_btn_h = 140, 48
+        start_btn_w, start_btn_h = 168, 78
+        back_btn_w, back_btn_h = 116, 127
+        next_btn_w, next_btn_h = 116, 127
+        prev_btn_w, prev_btn_h = 116, 127
 
         self.start_rect = pygame.Rect(app.WIDTH - start_btn_w - 20, 20, start_btn_w, start_btn_h)
         self.back_rect = pygame.Rect(20, 20, back_btn_w, back_btn_h)
 
         # bottom left and right for prev/next (if needed in future)
-        self.prev_rect = pygame.Rect(20, app.HEIGHT - prev_btn_h - 20, prev_btn_w, prev_btn_h)
-        self.next_rect = pygame.Rect(app.WIDTH - next_btn_w - 20, app.HEIGHT - next_btn_h - 20, next_btn_w, next_btn_h)
+        self.prev_rect = pygame.Rect(20, app.HEIGHT/2 - (127/2), prev_btn_w, prev_btn_h)
+        self.next_rect = pygame.Rect(app.WIDTH - next_btn_w - 20, app.HEIGHT/2 - (127/2), next_btn_w, next_btn_h)
         
        
 
@@ -48,6 +48,7 @@ class TutorialScene:
         try:
             prev_img = self.res_mgr.get_image("btn_prev")
         except Exception:
+            
             prev_img = None
 
         self.start_button = Button(
@@ -222,7 +223,7 @@ class TutorialScene:
     def render(self):
         # draw background image or color
         try:
-            bg_image = self.res_mgr.get_image("background")
+            bg_image = self.res_mgr.get_image("game_background")
             if bg_image:
                 # protect against invalid surfaces
                 scaled = pygame.transform.smoothscale(bg_image, (self.app.WIDTH, self.app.HEIGHT))
