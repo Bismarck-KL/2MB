@@ -33,7 +33,7 @@ class Application:
             # TO-DO(Qianrina): upload the resources with correct paths
             "background": os.path.abspath(os.path.join("assets", "images", "background.png")),
             "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.jpg")),
-            "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.jpg")),
+            "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.png")),
             "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
             "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),
             "btn_back": os.path.abspath(os.path.join("assets", "images", "button_back.png")),
