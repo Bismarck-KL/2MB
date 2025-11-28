@@ -15,6 +15,7 @@ try:
         initialize_mediapipe,
     )
     from utils.loading import run_loading_with_callback
+
     # optional action detector (uses mediapipe directly)
     from utils.action_detector import ActionDetector
 except Exception:
@@ -60,7 +61,6 @@ except Exception:
     mc = None
 
 
-
 class GameScene:
     """Fighting game scene with 2-player combat."""
 
@@ -76,8 +76,8 @@ class GameScene:
         self.screen = app.screen
         # 使用支持中文的字體
         try:
-            self.font = pygame.font.SysFont('microsoftyahei', 36)
-            self.title_font = pygame.font.SysFont('microsoftyahei', 60)
+            self.font = pygame.font.SysFont("microsoftyahei", 36)
+            self.title_font = pygame.font.SysFont("microsoftyahei", 60)
         except:
             self.font = app.font
             self.title_font = app.title_font
@@ -101,12 +101,20 @@ class GameScene:
 
         # Player entities with animation system
         # Player 1 使用 player1 的圖片，Player 2 使用 player2 的圖片
-        self.player_1 = Player(app, 0, image_key="player1",
-                               use_animation=True,
-                               animation_image="assets/photo/player1/tpose.png")
-        self.player_2 = Player(app, 1, image_key="player2",
-                               use_animation=True,
-                               animation_image="assets/photo/player2/tpose.png")
+        self.player_1 = Player(
+            app,
+            0,
+            image_key="player1",
+            use_animation=True,
+            animation_image="assets/photo/player1/tpose.png",
+        )
+        self.player_2 = Player(
+            app,
+            1,
+            image_key="player2",
+            use_animation=True,
+            animation_image="assets/photo/player2/tpose.png",
+        )
 
         # create action detector but don't start it yet; we will start in on_enter
         try:
@@ -117,24 +125,24 @@ class GameScene:
         # per-player detected action state (updated by ActionDetector callback)
         self.detected_actions = {0: None, 1: None}
         self._action_expiry = {0: 0.0, 1: 0.0}
-        
+
         # 格鬥遊戲設定
         self.player_1.position = [300, 500]  # 左側起始位置
         self.player_2.position = [1300, 500]  # 右側起始位置
-        self.player_1.facing = 'right'
-        self.player_2.facing = 'left'
-        
+        self.player_1.facing = "right"
+        self.player_2.facing = "left"
+
         # 遊戲機制
         self.round_time = 99  # 回合時間（秒）
         self.game_over = False
         self.winner = None
-        
+
         # 攻擊設定
         self.attack_range = 150
         self.punch_damage = 10
         self.kick_damage = 15
         self.block_reduction = 0.7  # 防禦減傷70%
-        
+
         # 物理設定
         self.ground_y = 500
         self.gravity = 0.8
@@ -157,11 +165,13 @@ class GameScene:
         # Play background music for the game scene (looped)
         try:
             # Prefer using the ResourceManager if available (preloaded bgm).
-            music_path = os.path.join('assets', 'sounds', 'fighting scene_bgm.mp3')
-            if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
+            music_path = os.path.join("assets", "sounds", "fighting scene_bgm.mp3")
+            if hasattr(self, "res_mgr") and getattr(
+                self.res_mgr, "audio_loaders", None
+            ):
                 try:
                     # finalize & play the named 'fighting' track (falls back if missing)
-                    self.res_mgr.finalize_and_play('fighting')
+                    self.res_mgr.finalize_and_play("fighting")
                 except Exception:
                     # fall back to local mixer play below
                     pass
@@ -170,7 +180,9 @@ class GameScene:
                 try:
                     if not pygame.mixer.get_init():
                         print("[SFX] Initializing mixer with 16 channels...")
-                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        pygame.mixer.init(
+                            frequency=44100, size=-16, channels=2, buffer=512
+                        )
                         pygame.mixer.set_num_channels(16)
                 except Exception:
                     try:
@@ -197,13 +209,13 @@ class GameScene:
                 self.action_detector.start()
         except Exception:
             pass
-        
+
         # draw latest mediapipe landmarks (if available) into a small preview
         try:
             if mc:
                 latest = mc.get_latest_landmarks()
-                if latest and latest.get('landmarks'):
-                    lm = latest['landmarks']
+                if latest and latest.get("landmarks"):
+                    lm = latest["landmarks"]
                     # preview rectangle on left side below HUD
                     pv_w, pv_h = 360, 270
                     pv_x, pv_y = 40, 140
@@ -230,7 +242,7 @@ class GameScene:
             pass
         # start action detector (if available)
         try:
-            if getattr(self, 'action_detector', None):
+            if getattr(self, "action_detector", None):
                 self.action_detector.start()
         except Exception:
             pass
@@ -242,7 +254,7 @@ class GameScene:
         except Exception:
             pass
         try:
-            if getattr(self, 'action_detector', None):
+            if getattr(self, "action_detector", None):
                 self.action_detector.stop()
         except Exception:
             pass
@@ -273,12 +285,24 @@ class GameScene:
                 self._action_expiry[player_id] = now + 1.0  # show for 1s
                 # map to player triggers for animations
                 try:
-                    if action_name == 'punch':
-                        self.player_1.trigger_action('punch', 0.3) if player_id == 0 else self.player_2.trigger_action('punch', 0.3)
-                    elif action_name == 'kick':
-                        self.player_1.trigger_action('kick', 0.3) if player_id == 0 else self.player_2.trigger_action('kick', 0.3)
-                    elif action_name == 'jump':
-                        self.player_1.trigger_action('jump', 0.5) if player_id == 0 else self.player_2.trigger_action('jump', 0.5)
+                    if action_name == "punch":
+                        (
+                            self.player_1.trigger_action("punch", 0.3)
+                            if player_id == 0
+                            else self.player_2.trigger_action("punch", 0.3)
+                        )
+                    elif action_name == "kick":
+                        (
+                            self.player_1.trigger_action("kick", 0.3)
+                            if player_id == 0
+                            else self.player_2.trigger_action("kick", 0.3)
+                        )
+                    elif action_name == "jump":
+                        (
+                            self.player_1.trigger_action("jump", 0.5)
+                            if player_id == 0
+                            else self.player_2.trigger_action("jump", 0.5)
+                        )
                 except Exception:
                     pass
         except Exception:
@@ -287,16 +311,20 @@ class GameScene:
     def handle_event(self, event):
         # print(f'[DEBUG] GameScene.handle_event: event={event}, game_over={self.game_over}')
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            print('[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene')
+            print("[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene")
             self.app.change_scene("MenuScene")
 
         # back button click
         if self.back_button.handle_event(event):
             # print('[DEBUG] GameScene.handle_event: Back button clicked, switching to MenuScene')
             self.app.change_scene("MenuScene")
-        
+
         # 遊戲結束後按空白鍵重新開始
-        if self.game_over and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+        if (
+            self.game_over
+            and event.type == pygame.KEYDOWN
+            and event.key == pygame.K_SPACE
+        ):
             # print('[DEBUG] GameScene.handle_event: SPACE pressed, restarting game')
             self.reset_game()
 
@@ -314,30 +342,30 @@ class GameScene:
                 return
 
             # map actions
-            if action == 'jump' and not player.is_jumping:
-                player.trigger_action('jump', 0.5)
+            if action == "jump" and not player.is_jumping:
+                player.trigger_action("jump", 0.5)
                 player.velocity_y = self.jump_force
                 jump_dist = 25
-                if player.facing == 'right':
+                if player.facing == "right":
                     player.position[0] += jump_dist
                 else:
                     player.position[0] -= jump_dist
 
-            if action == 'punch' and getattr(player, 'attack_cooldown', 0) <= 0:
+            if action == "punch" and getattr(player, "attack_cooldown", 0) <= 0:
                 # print(f"GameScene: camera detected punch by player {player_id}")
-                player.trigger_action('punch', 0.3)
+                player.trigger_action("punch", 0.3)
                 player.attack_cooldown = 0.3
-                player.current_attack = 'punch'
+                player.current_attack = "punch"
 
-            if action == 'kick' and getattr(player, 'attack_cooldown', 0) <= 0:
+            if action == "kick" and getattr(player, "attack_cooldown", 0) <= 0:
                 # print(f"GameScene: camera detected kick by player {player_id}")
-                player.trigger_action('kick', 0.3)
+                player.trigger_action("kick", 0.3)
                 player.attack_cooldown = 0.3
-                player.current_attack = 'kick'
-            
-            if action == 'block':
+                player.current_attack = "kick"
+
+            if action == "block":
                 player.is_blocking = True
-                player.trigger_action('block', 0.5)
+                player.trigger_action("block", 0.5)
             else:
                 player.is_blocking = False
 
@@ -348,30 +376,30 @@ class GameScene:
         if self.game_over:
             # 遊戲結束時只顯示結果，不自動退出
             return
-        
+
         # 更新回合時間
         self.round_time -= dt
         if self.round_time <= 0:
             self.end_game_by_time()
             return
-        
+
         # 處理鍵盤輸入
         keys = pygame.key.get_pressed()
         self.handle_player_input(keys)
-        
+
         # 更新玩家
         self.player_1.update(dt)
         self.player_2.update(dt)
-        
+
         # 更新物理（跳躍）
         self.update_physics()
-        
+
         # 更新面向方向
         self.update_facing()
-        
+
         # 檢查碰撞和攻擊
         self.check_attacks()
-        
+
         # 檢查勝負
         self.check_win_condition()
 
@@ -381,87 +409,87 @@ class GameScene:
         if not self.player_1.is_hurt:
             # 1: 跳躍向前
             if keys[pygame.K_1] and not self.player_1.is_jumping:
-                self.player_1.trigger_action('jump', 0.5)
+                self.player_1.trigger_action("jump", 0.5)
                 self.player_1.velocity_y = self.jump_force
                 # 根據面向跳躍
                 jump_dist = 25
-                if self.player_1.facing == 'right':
+                if self.player_1.facing == "right":
                     self.player_1.position[0] += jump_dist
                 else:
                     self.player_1.position[0] -= jump_dist
-            
+
             # 2: 出拳
             if keys[pygame.K_2] and self.player_1.attack_cooldown <= 0:
-                self.player_1.trigger_action('punch', 0.3)
+                self.player_1.trigger_action("punch", 0.3)
                 self.player_1.attack_cooldown = 0.3
-                self.player_1.current_attack = 'punch'
-            
+                self.player_1.current_attack = "punch"
+
             # 3: 踢腿
             if keys[pygame.K_3] and self.player_1.attack_cooldown <= 0:
-                self.player_1.trigger_action('kick', 0.3)
+                self.player_1.trigger_action("kick", 0.3)
                 self.player_1.attack_cooldown = 0.3
-                self.player_1.current_attack = 'kick'
-            
+                self.player_1.current_attack = "kick"
+
             # 4: 防禦
             if keys[pygame.K_4]:
                 self.player_1.is_blocking = True
-                self.player_1.trigger_action('block', 0.5)
+                self.player_1.trigger_action("block", 0.5)
             else:
                 self.player_1.is_blocking = False
-        
+
         # Player 2 控制 (QWER)
         if not self.player_2.is_hurt:
             # Q: 跳躍向前
             if keys[pygame.K_q] and not self.player_2.is_jumping:
-                self.player_2.trigger_action('jump', 0.5)
+                self.player_2.trigger_action("jump", 0.5)
                 self.player_2.velocity_y = self.jump_force
                 # 根據面向跳躍
                 jump_dist = 25
-                if self.player_2.facing == 'right':
+                if self.player_2.facing == "right":
                     self.player_2.position[0] += jump_dist
                 else:
                     self.player_2.position[0] -= jump_dist
-            
+
             # W: 出拳
             if keys[pygame.K_w] and self.player_2.attack_cooldown <= 0:
-                self.player_2.trigger_action('punch', 0.3)
+                self.player_2.trigger_action("punch", 0.3)
                 self.player_2.attack_cooldown = 0.3
-                self.player_2.current_attack = 'punch'
-            
+                self.player_2.current_attack = "punch"
+
             # E: 踢腿
             if keys[pygame.K_e] and self.player_2.attack_cooldown <= 0:
-                self.player_2.trigger_action('kick', 0.3)
+                self.player_2.trigger_action("kick", 0.3)
                 self.player_2.attack_cooldown = 0.3
-                self.player_2.current_attack = 'kick'
-            
+                self.player_2.current_attack = "kick"
+
             # R: 防禦
             if keys[pygame.K_r]:
                 self.player_2.is_blocking = True
-                self.player_2.trigger_action('block', 0.5)
+                self.player_2.trigger_action("block", 0.5)
             else:
                 self.player_2.is_blocking = False
-    
+
     def update_physics(self):
         """更新物理（重力和跳躍）"""
         for player in [self.player_1, self.player_2]:
             if player.is_jumping:
                 player.velocity_y += self.gravity
                 player.position[1] += player.velocity_y
-                
+
                 # 落地
                 if player.position[1] >= self.ground_y:
                     player.position[1] = self.ground_y
                     player.velocity_y = 0
                     player.is_jumping = False
-        
+
         # 防止角色重疊
         self.prevent_overlap()
-    
+
     def prevent_overlap(self):
         """防止角色重疊"""
         min_distance = 100  # 最小距離（角色寬度）
         distance = self.player_2.position[0] - self.player_1.position[0]
-        
+
         if abs(distance) < min_distance:
             # 推開角色
             overlap = min_distance - abs(distance)
@@ -471,38 +499,49 @@ class GameScene:
             else:  # player2在左邊
                 self.player_1.position[0] += overlap / 2
                 self.player_2.position[0] -= overlap / 2
-    
+
     def update_facing(self):
         """更新角色面向"""
         if self.player_1.position[0] < self.player_2.position[0]:
-            self.player_1.facing = 'right'
-            self.player_2.facing = 'left'
+            self.player_1.facing = "right"
+            self.player_2.facing = "left"
         else:
-            self.player_1.facing = 'left'
-            self.player_2.facing = 'right'
-    
+            self.player_1.facing = "left"
+            self.player_2.facing = "right"
+
     def check_attacks(self):
         """檢查攻擊碰撞"""
         distance = abs(self.player_1.position[0] - self.player_2.position[0])
-        
+
         # Player 1 攻擊 Player 2
-        if hasattr(self.player_1, 'current_attack') and self.player_1.current_attack:
-            if distance <= self.attack_range and self.player_1.attack_cooldown > 0.2:
-                damage = self.punch_damage if self.player_1.current_attack == 'punch' else self.kick_damage
+        if hasattr(self.player_1, "current_attack") and self.player_1.current_attack:
+            # Attack is active while attack_cooldown > 0. Accept any positive
+            # cooldown so attacks aren't missed on low frame rates.
+            if distance <= self.attack_range and self.player_1.attack_cooldown > 0.0:
+                damage = (
+                    self.punch_damage
+                    if self.player_1.current_attack == "punch"
+                    else self.kick_damage
+                )
                 if self.player_2.is_blocking:
                     damage = int(damage * self.block_reduction)
                 self.player_2.take_damage(damage)
                 self.player_1.current_attack = None
-        
+
         # Player 2 攻擊 Player 1
-        if hasattr(self.player_2, 'current_attack') and self.player_2.current_attack:
-            if distance <= self.attack_range and self.player_2.attack_cooldown > 0.2:
-                damage = self.punch_damage if self.player_2.current_attack == 'punch' else self.kick_damage
+        if hasattr(self.player_2, "current_attack") and self.player_2.current_attack:
+            # See comment above for player 1
+            if distance <= self.attack_range and self.player_2.attack_cooldown > 0.0:
+                damage = (
+                    self.punch_damage
+                    if self.player_2.current_attack == "punch"
+                    else self.kick_damage
+                )
                 if self.player_1.is_blocking:
                     damage = int(damage * self.block_reduction)
                 self.player_1.take_damage(damage)
                 self.player_2.current_attack = None
-    
+
     def check_win_condition(self):
         """檢查勝負條件"""
         if self.player_1.health_points <= 0:
@@ -523,8 +562,8 @@ class GameScene:
             print(f"[SFX] Mixer get_init: {pygame.mixer.get_init()}")
             print(f"[SFX] Mixer music busy: {pygame.mixer.music.get_busy()}")
             print(f"[SFX] Mixer num_channels: {pygame.mixer.get_num_channels()}")
-            if not hasattr(self, '_win_sound_played') or not self._win_sound_played:
-                win_path = 'assets/sounds/you win.wav'
+            if not hasattr(self, "_win_sound_played") or not self._win_sound_played:
+                win_path = "assets/sounds/you win.wav"
                 print(f"[SFX] Loading win sound: {win_path}")
                 if not os.path.exists(win_path):
                     print(f"[SFX] Win sound file not found: {win_path}")
@@ -541,7 +580,7 @@ class GameScene:
                 self._win_sound_played = True
         except Exception as e:
             print(f"[SFX] Win sound error: {e}")
-    
+
     def end_game_by_time(self):
         """時間到，血量多的獲勝"""
         self.game_over = True
@@ -551,15 +590,15 @@ class GameScene:
             self.winner = 2
         else:
             self.winner = 0  # 平手
-    
+
     def reset_game(self):
         """重置遊戲"""
         self.player_1.health_points = self.player_1.max_health_points
         self.player_2.health_points = self.player_2.max_health_points
         self.player_1.position = [300, 500]
         self.player_2.position = [1300, 500]
-        self.player_1.facing = 'right'
-        self.player_2.facing = 'left'
+        self.player_1.facing = "right"
+        self.player_2.facing = "left"
         self.player_1.is_jumping = False
         self.player_2.is_jumping = False
         self.player_1.velocity_y = 0
@@ -568,9 +607,9 @@ class GameScene:
         self.game_over = False
         self.winner = None
         self._win_sound_played = False
-        if hasattr(self.player_1, 'attack_cooldown'):
+        if hasattr(self.player_1, "attack_cooldown"):
             self.player_1.attack_cooldown = 0
-        if hasattr(self.player_2, 'attack_cooldown'):
+        if hasattr(self.player_2, "attack_cooldown"):
             self.player_2.attack_cooldown = 0
 
     def render(self):
@@ -579,7 +618,8 @@ class GameScene:
             bg_image = self.res_mgr.get_image("game_background")
             if bg_image:
                 scaled = pygame.transform.smoothscale(
-                    bg_image, (self.app.WIDTH, self.app.HEIGHT))
+                    bg_image, (self.app.WIDTH, self.app.HEIGHT)
+                )
                 pixelated = self._pixelate_surface(scaled, pixel_size=6)
                 self.screen.blit(pixelated, (0, 0))
             else:
@@ -604,9 +644,19 @@ class GameScene:
                 if action and now < expiry:
                     # render above player rect
                     txt = self.font.render(action, True, (255, 200, 50))
-                    txt_rect = txt.get_rect(center=(int(player.pos.x), int(player.pos.y) - player.size[1] // 2 - 20))
+                    txt_rect = txt.get_rect(
+                        center=(
+                            int(player.pos.x),
+                            int(player.pos.y) - player.size[1] // 2 - 20,
+                        )
+                    )
                     # background box
-                    box = pygame.Rect(txt_rect.x - 6, txt_rect.y - 4, txt_rect.width + 12, txt_rect.height + 8)
+                    box = pygame.Rect(
+                        txt_rect.x - 6,
+                        txt_rect.y - 4,
+                        txt_rect.width + 12,
+                        txt_rect.height + 8,
+                    )
                     pygame.draw.rect(self.screen, (20, 20, 20), box)
                     pygame.draw.rect(self.screen, (120, 120, 120), box, 2)
                     self.screen.blit(txt, txt_rect)
@@ -619,56 +669,72 @@ class GameScene:
             h_margin = 100
             bar_w = 360
             bar_h = 20
-            
+
             # Player 1 health bar (left)
             p1_rect = pygame.Rect(w_margin, h_margin, bar_w, bar_h)
             draw_health_bar(
-                self.screen, p1_rect, self.player_1.health_points, self.player_1.max_health_points)
+                self.screen,
+                p1_rect,
+                self.player_1.health_points,
+                self.player_1.max_health_points,
+            )
             lbl1 = self.font.render("P1", True, TITLE)
             self.screen.blit(lbl1, (p1_rect.right + 8, h_margin - 2))
 
             # Player 2 health bar (right)
             p2_rect = pygame.Rect(
-                self.app.WIDTH - w_margin - bar_w, h_margin, bar_w, bar_h)
+                self.app.WIDTH - w_margin - bar_w, h_margin, bar_w, bar_h
+            )
             draw_health_bar(
-                self.screen, p2_rect, self.player_2.health_points, self.player_2.max_health_points)
+                self.screen,
+                p2_rect,
+                self.player_2.health_points,
+                self.player_2.max_health_points,
+            )
             lbl2 = self.font.render("P2", True, TITLE)
             lbl2_rect = lbl2.get_rect()
-            self.screen.blit(
-                lbl2, (p2_rect.left - lbl2_rect.width - 8, h_margin - 2))
-            
+            self.screen.blit(lbl2, (p2_rect.left - lbl2_rect.width - 8, h_margin - 2))
+
             # 回合時間
             time_text = self.title_font.render(f"{int(self.round_time)}", True, TITLE)
             time_rect = time_text.get_rect(center=(self.app.WIDTH // 2, 40))
             self.screen.blit(time_text, time_rect)
-            
+
             # 控制說明
             controls_y = self.app.HEIGHT - 80
-            p1_controls = self.font.render("P1: 1-Jump  2-Punch  3-Kick  4-Block", True, (200, 200, 200))
-            p2_controls = self.font.render("P2: Q-Jump  W-Punch  E-Kick  R-Block", True, (200, 200, 200))
+            p1_controls = self.font.render(
+                "P1: 1-Jump  2-Punch  3-Kick  4-Block", True, (200, 200, 200)
+            )
+            p2_controls = self.font.render(
+                "P2: Q-Jump  W-Punch  E-Kick  R-Block", True, (200, 200, 200)
+            )
             self.screen.blit(p1_controls, (50, controls_y))
             p2_x = self.app.WIDTH - p2_controls.get_width() - 50
             self.screen.blit(p2_controls, (p2_x, controls_y))
-            
+
         except Exception:
             pass
-        
+
         # 遊戲結束畫面
         if self.game_over:
             overlay = pygame.Surface((self.app.WIDTH, self.app.HEIGHT))
             overlay.set_alpha(128)
             overlay.fill((0, 0, 0))
             self.screen.blit(overlay, (0, 0))
-            
+
             if self.winner == 0:
                 result_text = "DRAW!"
             else:
                 result_text = f"PLAYER {self.winner} WINS!"
-            
+
             result = self.title_font.render(result_text, True, (255, 255, 0))
-            result_rect = result.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
+            result_rect = result.get_rect(
+                center=(self.app.WIDTH // 2, self.app.HEIGHT // 2)
+            )
             self.screen.blit(result, result_rect)
-            
+
             restart = self.font.render("Press SPACE to Restart", True, (255, 255, 255))
-            restart_rect = restart.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 + 60))
+            restart_rect = restart.get_rect(
+                center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 + 60)
+            )
             self.screen.blit(restart, restart_rect)
