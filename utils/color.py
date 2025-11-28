@@ -6,13 +6,15 @@ Place shared colors here so they can be imported across modules.
 # Basic
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+ORANGEYELLOW = (255, 200, 50)
+YELLOW = (255, 255, 0)
+GRAY = (120, 120, 120)
 
 # Background and UI
 BG = (20, 20, 20)
 TITLE = (240, 240, 240)
 TIPS = (180, 180, 180)
 
-YELLOW = (255, 255, 0)
 
 
 # Start button
@@ -51,7 +53,9 @@ HEALTH_RED = (220, 50, 50)      # critical
 COLORS = {
     "white": WHITE,
     "black": BLACK,
+    "orangeyellow": ORANGEYELLOW,
     "yellow": YELLOW,
+    "gray": GRAY,
     "bg": BG,
     "title": TITLE,
     "tips": TIPS,
@@ -77,7 +81,9 @@ COLORS = {
 __all__ = [
     "WHITE",
     "BLACK",
+    "ORANGEYELLOW",
     "YELLOW",
+    "GRAY",
     "BG",
     "TITLE",
     "TIPS",
