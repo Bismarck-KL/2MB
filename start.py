@@ -15,7 +15,7 @@ from tutorial_scene import TutorialScene
 
 
 class Application:
-    def __init__(self, width=1000, height=675):
+    def __init__(self, width=1024, height=768):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
