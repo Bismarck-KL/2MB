@@ -50,7 +50,7 @@ class AvatarCreateScene:
             hover_color=QUIT_HOVER,
         )
 
-        # next button (top-right) - navigate to GameScene
+        # next button (top-right) - navigate to tutorial scene
         next_w, next_h = 140, 48
         next_x = self.app.WIDTH - 20 - next_w
         next_y = 20
@@ -324,10 +324,10 @@ class AvatarCreateScene:
                     except Exception as e:
                         print("Failed to start camera for Player2:", e)
                 else:
-                    self.app.change_scene("GameScene")
+                    self.app.change_scene("TutorialScene")
             except Exception:
                 try:
-                    self.app.change_scene("GameScene")
+                    self.app.change_scene("TutorialScene")
                 except Exception:
                     pass
 
