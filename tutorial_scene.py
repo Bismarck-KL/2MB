@@ -222,7 +222,7 @@ class TutorialScene:
     def render(self):
         # draw background image or color
         try:
-            bg_image = self.res_mgr.get_image("background")
+            bg_image = self.res_mgr.get_image("game_background")
             if bg_image:
                 # protect against invalid surfaces
                 scaled = pygame.transform.smoothscale(bg_image, (self.app.WIDTH, self.app.HEIGHT))
