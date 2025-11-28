@@ -17,7 +17,7 @@ class TutorialScene:
 
         # TO-DO(Qianrina): update the button layout, size and positions
         # button layout
-        start_btn_w, start_btn_h = 168, 78
+        start_btn_w, start_btn_h = 116, 127
         back_btn_w, back_btn_h = 116, 127
         next_btn_w, next_btn_h = 116, 127
         prev_btn_w, prev_btn_h = 116, 127
