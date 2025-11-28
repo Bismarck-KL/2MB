@@ -87,9 +87,16 @@ class GameScene:
         try:
             self.font = pygame.font.SysFont("microsoftyahei", 36)
             self.title_font = pygame.font.SysFont("microsoftyahei", 60)
+            # smaller font for control hints
+            self.controls_font = pygame.font.SysFont("microsoftyahei", 20)
         except:
             self.font = app.font
             self.title_font = app.title_font
+            # fallback controls font
+            try:
+                self.controls_font = pygame.font.Font(None, 20)
+            except Exception:
+                self.controls_font = self.font
         self.res_mgr = app.res_mgr
 
         try:
@@ -711,10 +718,10 @@ class GameScene:
 
             # 控制說明
             controls_y = self.app.HEIGHT - 80
-            p1_controls = self.font.render(
+            p1_controls = self.controls_font.render(
                 "P1: 1-Jump  2-Punch  3-Kick  4-Block", True, TIPS
             )
-            p2_controls = self.font.render(
+            p2_controls = self.controls_font.render(
                 "P2: Q-Jump  W-Punch  E-Kick  R-Block", True, TIPS
             )
             self.screen.blit(p1_controls, (50, controls_y))
