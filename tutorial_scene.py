@@ -48,6 +48,7 @@ class TutorialScene:
         try:
             prev_img = self.res_mgr.get_image("btn_prev")
         except Exception:
+            
             prev_img = None
 
         self.start_button = Button(
