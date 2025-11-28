@@ -63,8 +63,21 @@ class Button:
 
     def draw(self, surface: pygame.Surface, mouse_pos):
         if self.image:
-            img_rect = self.image.get_rect(center=self.rect.center)
-            surface.blit(self.image, img_rect)
+            # Scale the provided image to the button rectangle so it fits the button size.
+            # We use smoothscale for a nicer result; this will stretch the image to fill the
+            # rect. If you prefer to preserve aspect ratio, we can change this to fit + letterbox.
+            try:
+                img_surf = pygame.transform.smoothscale(self.image, (self.rect.width, self.rect.height))
+                img_rect = img_surf.get_rect(center=self.rect.center)
+                surface.blit(img_surf, img_rect)
+            except Exception:
+                # If scaling fails for any reason, fall back to blitting the original image
+                try:
+                    img_rect = self.image.get_rect(center=self.rect.center)
+                    surface.blit(self.image, img_rect)
+                except Exception:
+                    # swallow errors to avoid crashing UI
+                    pass
         else:
             draw_button(surface, self.rect, self.text, self.font, self.base_color, self.hover_color, mouse_pos)
 
