@@ -250,8 +250,28 @@ class TutorialScene:
                 img = val
 
             if img:
-                img_rect = img.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
-                self.screen.blit(img, img_rect)
+                # Scale the tutorial image to at most 60% of the screen while
+                # preserving aspect ratio. Do not upscale small images.
+                orig_w, orig_h = img.get_size()
+                max_w = int(self.app.WIDTH * 0.6)
+                max_h = int(self.app.HEIGHT * 0.6)
+                # guard against zero sizes
+                if orig_w <= 0 or orig_h <= 0:
+                    scaled_img = img
+                else:
+                    scale = min(max_w / orig_w, max_h / orig_h, 1.0)
+                    new_w = max(1, int(orig_w * scale))
+                    new_h = max(1, int(orig_h * scale))
+                    if new_w != orig_w or new_h != orig_h:
+                        try:
+                            scaled_img = pygame.transform.smoothscale(img, (new_w, new_h))
+                        except Exception:
+                            scaled_img = pygame.transform.scale(img, (new_w, new_h))
+                    else:
+                        scaled_img = img
+
+                img_rect = scaled_img.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
+                self.screen.blit(scaled_img, img_rect)
         except Exception:
             # if anything goes wrong drawing the tutorial image, ignore and continue
             pass
