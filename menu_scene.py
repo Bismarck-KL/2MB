@@ -147,9 +147,9 @@ class MenuScene:
             self.screen.fill(BG)
 
         # title
-        title_surf = self.title_font.render("Main Menu", True, TITLE)
-        title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 - 140))
-        self.screen.blit(title_surf, title_rect)
+        #title_surf = self.title_font.render("Main Menu", True, TITLE)
+        #title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 - 140))
+        #self.screen.blit(title_surf, title_rect)
 
         mouse_pos = pygame.mouse.get_pos()
         self.start_button.draw(self.screen, mouse_pos)
