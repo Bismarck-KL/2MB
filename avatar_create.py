@@ -40,6 +40,11 @@ class AvatarCreateScene:
 
         self.is_ready_to_next = False
 
+        try:
+            back_img = self.res_mgr.get_image("btn_back")
+        except Exception:
+            back_img = None
+
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
         self.back_button = Button(
@@ -48,6 +53,7 @@ class AvatarCreateScene:
             font=self.font,
             base_color=QUIT_BASE,
             hover_color=QUIT_HOVER,
+            image=back_img,
         )
 
         # next button (top-right) - navigate to tutorial scene
