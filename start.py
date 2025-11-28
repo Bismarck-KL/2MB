@@ -15,7 +15,7 @@ from tutorial_scene import TutorialScene
 
 
 class Application:
-    def __init__(self, width=1200, height=900):
+    def __init__(self, width=1000, height=750):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
@@ -32,7 +32,7 @@ class Application:
             
             # TO-DO(Qianrina): upload the resources with correct paths
             "background": os.path.abspath(os.path.join("assets", "images", "background.png")),
-            "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.png")),
+            "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.")),
             "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.png")),
             "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
             "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),

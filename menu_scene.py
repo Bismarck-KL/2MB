@@ -20,8 +20,8 @@ class MenuScene:
         center_x = app.WIDTH // 2
         center_y = app.HEIGHT // 2
 
-        self.start_rect = pygame.Rect(58, 450, btn_w, btn_h)
-        self.quit_rect = pygame.Rect(60, 530, btn_w, btn_h)
+        self.start_rect = pygame.Rect(40, 360, btn_w, btn_h)
+        self.quit_rect = pygame.Rect(40, 430, btn_w, btn_h)
 
         self.dev_game_rect = pygame.Rect(center_x + 20, center_y + btn_h + 20, btn_w, btn_h)
         self.pose_editor_rect = pygame.Rect(center_x - btn_w - 20, center_y + btn_h + 20, btn_w, btn_h)
