@@ -1,4 +1,4 @@
-# 2MB — 2D Character Animation
+# 2MB — 2(People) Motion Battle
 
 Step in! and the game fights as you!
 •	Snap one full body photo—instantly become your own pixel fighter.
