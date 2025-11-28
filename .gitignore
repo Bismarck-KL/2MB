@@ -8,3 +8,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Ignore player photos and tpose images (local uploads)
+assets/images/photo/player1/player1_photo.jpg
+assets/images/photo/player1/tpose.png
+assets/images/photo/player2/player2_photo.jpg
+assets/images/photo/player2/tpose.png
