@@ -310,7 +310,7 @@ class GameScene:
     def handle_event(self, event):
         # print(f'[DEBUG] GameScene.handle_event: event={event}, game_over={self.game_over}')
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            print("[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene")
+            # print("[DEBUG] GameScene.handle_event: ESC pressed, switching to MenuScene")
             self.app.change_scene("MenuScene")
 
         # back button click
