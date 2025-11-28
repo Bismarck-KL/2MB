@@ -28,7 +28,6 @@ except Exception:
 
     def initialize_mediapipe(report, stop_event=None):
         # fake progress for the loading UI when mediapipe isn't installed
-        import time
 
         for p in range(0, 101, 10):
             if stop_event is not None and stop_event.is_set():
