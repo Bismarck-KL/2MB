@@ -12,6 +12,8 @@ BG = (20, 20, 20)
 TITLE = (240, 240, 240)
 TIPS = (180, 180, 180)
 
+YELLOW = (255, 255, 0)
+
 
 # Start button
 START_BASE = (30, 144, 255)  # dodgerblue
@@ -49,6 +51,7 @@ HEALTH_RED = (220, 50, 50)      # critical
 COLORS = {
     "white": WHITE,
     "black": BLACK,
+    "yellow": YELLOW,
     "bg": BG,
     "title": TITLE,
     "tips": TIPS,
@@ -74,6 +77,7 @@ COLORS = {
 __all__ = [
     "WHITE",
     "BLACK",
+    "YELLOW",
     "BG",
     "TITLE",
     "TIPS",
