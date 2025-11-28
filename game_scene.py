@@ -3,7 +3,17 @@ import pygame.surfarray
 import os
 import time
 
-from utils.color import BG, TITLE, QUIT_BASE, QUIT_HOVER, HEALTH, HEALTH_BG
+from utils.color import (
+    BG,
+    TITLE,
+    TIPS,
+    QUIT_BASE,
+    QUIT_HOVER,
+    WHITE,
+    YELLOW,
+    ORANGEYELLOW,
+    GRAY,
+)
 from utils.ui import Button, draw_health_bar
 from classes.player import Player
 
@@ -235,7 +245,7 @@ class GameScene:
                             continue
 
                     # label
-                    lbl = self.font.render("Camera Preview", True, (200, 200, 200))
+                    lbl = self.font.render("Camera Preview", True, TIPS)
                     self.screen.blit(lbl, (pv_x + 6, pv_y - 30))
         except Exception:
             pass
@@ -642,7 +652,7 @@ class GameScene:
                 expiry = self._action_expiry.get(pid, 0)
                 if action and now < expiry:
                     # render above player rect
-                    txt = self.font.render(action, True, (255, 200, 50))
+                    txt = self.font.render(action, True, ORANGEYELLOW)
                     txt_rect = txt.get_rect(
                         center=(
                             int(player.pos.x),
@@ -656,8 +666,8 @@ class GameScene:
                         txt_rect.width + 12,
                         txt_rect.height + 8,
                     )
-                    pygame.draw.rect(self.screen, (20, 20, 20), box)
-                    pygame.draw.rect(self.screen, (120, 120, 120), box, 2)
+                    pygame.draw.rect(self.screen, BG, box)
+                    pygame.draw.rect(self.screen, GRAY, box, 2)
                     self.screen.blit(txt, txt_rect)
         except Exception:
             pass
@@ -702,10 +712,10 @@ class GameScene:
             # 控制說明
             controls_y = self.app.HEIGHT - 80
             p1_controls = self.font.render(
-                "P1: 1-Jump  2-Punch  3-Kick  4-Block", True, (200, 200, 200)
+                "P1: 1-Jump  2-Punch  3-Kick  4-Block", True, TIPS
             )
             p2_controls = self.font.render(
-                "P2: Q-Jump  W-Punch  E-Kick  R-Block", True, (200, 200, 200)
+                "P2: Q-Jump  W-Punch  E-Kick  R-Block", True, TIPS
             )
             self.screen.blit(p1_controls, (50, controls_y))
             p2_x = self.app.WIDTH - p2_controls.get_width() - 50
@@ -726,13 +736,13 @@ class GameScene:
             else:
                 result_text = f"PLAYER {self.winner} WINS!"
 
-            result = self.title_font.render(result_text, True, (255, 255, 0))
+            result = self.title_font.render(result_text, True, YELLOW)
             result_rect = result.get_rect(
                 center=(self.app.WIDTH // 2, self.app.HEIGHT // 2)
             )
             self.screen.blit(result, result_rect)
 
-            restart = self.font.render("Press SPACE to Restart", True, (255, 255, 255))
+            restart = self.font.render("Press SPACE to Restart", True, WHITE)
             restart_rect = restart.get_rect(
                 center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 + 60)
             )
