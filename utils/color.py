@@ -10,6 +10,8 @@ BLACK = (0, 0, 0)
 # Background and UI
 BG = (20, 20, 20)
 TITLE = (240, 240, 240)
+TIPS = (180, 180, 180)
+
 
 # Start button
 START_BASE = (30, 144, 255)  # dodgerblue
@@ -49,6 +51,7 @@ COLORS = {
     "black": BLACK,
     "bg": BG,
     "title": TITLE,
+    "tips": TIPS,
     "start_base": START_BASE,
     "start_hover": START_HOVER,
     "quit_base": QUIT_BASE,
@@ -73,6 +76,7 @@ __all__ = [
     "BLACK",
     "BG",
     "TITLE",
+    "TIPS",
     "START_BASE",
     "START_HOVER",
     "QUIT_BASE",
