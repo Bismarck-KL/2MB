@@ -16,12 +16,12 @@ class MenuScene:
 
         # TO-DO(Qianrina): update the button layout, size and positions
         # button layout
-        btn_w, btn_h = 312, 115
+        btn_w, btn_h = 230, 96
         center_x = app.WIDTH // 2
         center_y = app.HEIGHT // 2
 
-        self.start_rect = pygame.Rect(40, 360, btn_w, btn_h)
-        self.quit_rect = pygame.Rect(40, 430, btn_w, btn_h)
+        self.start_rect = pygame.Rect(80, 380, btn_w, btn_h)
+        self.quit_rect = pygame.Rect(80, 450, btn_w, btn_h)
 
         self.dev_game_rect = pygame.Rect(center_x + 20, center_y + btn_h + 20, btn_w, btn_h)
         self.pose_editor_rect = pygame.Rect(center_x - btn_w - 20, center_y + btn_h + 20, btn_w, btn_h)
