@@ -10,10 +10,12 @@ from utils.resource_manager import ResourceManager
 from menu_scene import MenuScene
 from game_scene import GameScene
 from avatar_create import AvatarCreateScene
+from pose_editor_scene import PoseEditorScene
+from tutorial_scene import TutorialScene
 
 
 class Application:
-    def __init__(self, width=1600, height=900):
+    def __init__(self, width=1024, height=768):
         pygame.init()
         self.WIDTH = width
         self.HEIGHT = height
@@ -24,19 +26,44 @@ class Application:
         self.font = pygame.font.SysFont(None, 48)
         self.title_font = pygame.font.SysFont(None, 72)
 
-    # TO-DO(Qianrina): upload the resources with correct paths
+    
         # resources
         images = {
-            "background": os.path.join("assets", "images", "background.jpg"),
-            "game_background": os.path.join("assets", "images", "game_background.jpg"),
-            "avatar_create_background": os.path.join("assets", "images", "avatar_create_background.jpg"),
-            "btn_start": os.path.join("assets", "images", "button_start.png"),
-            "btn_quit": os.path.join("assets", "images", "button_quit.png"),
-            "player1": os.path.join("assets", "photo", "player1", "tpose.png"),
-            "player2": os.path.join("assets", "photo", "player2", "tpose.png"),
+            
+            # TO-DO(Qianrina): upload the resources with correct paths
+            "background": os.path.abspath(os.path.join("assets", "images", "background.png")),
+            "game_background": os.path.abspath(os.path.join("assets", "images", "game_background.png")),
+            "avatar_create_background": os.path.abspath(os.path.join("assets", "images", "avatar_create_background.png")),
+            "btn_start": os.path.abspath(os.path.join("assets", "images", "button_start.png")),
+            "btn_quit": os.path.abspath(os.path.join("assets", "images", "button_quit.png")),
+            "btn_back": os.path.abspath(os.path.join("assets", "images", "button_back.png")),
+            "btn_next": os.path.abspath(os.path.join("assets", "images", "button_next.png")),
+            "btn_prev": os.path.abspath(os.path.join("assets", "images", "button_prev.png")),
+            #####
+            
+            # guides for capture UI (optional files under each player folder)
+            # "player1_guide": os.path.abspath(os.path.join("assets", "photo", "player1", "guide.png")),
+            # "player2_guide": os.path.abspath(os.path.join("assets", "photo", "player2", "guide.png")),
+            # fallback/default tpose used by some scenes
+            "default_tpose": os.path.abspath(os.path.join("assets", "photo", "tpose.png")),
+            # Tutorial images
+            "tutorial_jump": os.path.abspath(os.path.join("assets", "images","tutorial", "jump.gif")),
+            "tutorial_punch": os.path.abspath(os.path.join("assets", "images","tutorial", "punch.gif")),
+            "tutorial_kick": os.path.abspath(os.path.join("assets", "images","tutorial", "kick.gif")),
+            "tutorial_block": os.path.abspath(os.path.join("assets", "images","tutorial", "block.gif")),
+
         }
-        self.res_mgr = ResourceManager(
-            images=images, image_base_dir=None, audio_path=None)
+        # Provide absolute paths to background music files so ResourceManager
+        # can preload them. We include both the main game BGM and the
+        # fighting-scene BGM so scenes can request the appropriate track.
+        game_bgm = os.path.abspath(os.path.join('assets', 'sounds', 'game_bgm.mp3'))
+        fighting_bgm = os.path.abspath(os.path.join('assets', 'sounds', 'fighting scene_bgm.mp3'))
+        audio_files = {
+            'game': game_bgm,
+            'fighting': fighting_bgm,
+        }
+
+        self.res_mgr = ResourceManager(images=images, image_base_dir=None, audio_files=audio_files)
 
         self.running = True
         self.scene = None
@@ -45,6 +72,8 @@ class Application:
             "MenuScene": MenuScene,
             "GameScene": GameScene,
             "AvatarCreateScene": AvatarCreateScene,
+            "PoseEditorScene": PoseEditorScene,
+            "TutorialScene": TutorialScene,
         }
 
     def change_scene(self, scene_name: str):
@@ -102,19 +131,25 @@ class Application:
         self.change_scene("MenuScene")
 
         # main loop
+        print('[DEBUG] Application.run: start main loop')
         while self.running:
+            # print(f'[DEBUG] Application.run: self.running={self.running}')
             dt = self.clock.tick(60) / 1000.0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    print('[DEBUG] Application.run: received pygame.QUIT')
                     self.running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    print('[DEBUG] Application.run: received ESC')
                     self.running = False
                 else:
                     if self.scene:
+                        # print(f'[DEBUG] Application.run: passing event {event} to scene.handle_event')
                         self.scene.handle_event(event)
 
-            if self.scene:
+            # 只在 running 為 True 時更新場景
+            if self.running and self.scene:
                 self.scene.update(dt)
 
             if self.scene:

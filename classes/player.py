@@ -26,7 +26,8 @@ class Player:
     ) -> None:
         self.app = app
         self.screen = app.screen
-        w, h = (200, 200)
+        # Increase default player size by 50%
+        w, h = (300, 300)
 
         # player 0, bottom left; player 1, bottom right
         start_x = (50 + w) if player_id == 0 else app.WIDTH - 50 - w
@@ -51,12 +52,19 @@ class Player:
                 if os.path.exists(anim_path):
                     # Player 1 面向右邊，Player 2 面向左邊（翻轉）
                     flip = (player_id == 1)
+                    # increase animation scale by 50% (0.5 -> 0.75)
                     self.animated_char = AnimatedCharacter(
                         image_path=anim_path,
-                        scale=0.5,
+                        scale=0.75,
                         enable_pixelate=True,
                         flip_horizontal=flip
                     )
+                    # provide shared ResourceManager from app so images/sfx can be reused
+                    try:
+                        if hasattr(app, 'res_mgr') and app.res_mgr:
+                            self.animated_char.set_resource_manager(app.res_mgr)
+                    except Exception:
+                        pass
                     self.animated_char.set_position(
                         int(self.pos.x), int(self.pos.y))
                     # 設置初始姿勢為ready
@@ -164,6 +172,31 @@ class Player:
             time.sleep(0.5)
             self.is_hurt = False
         threading.Thread(target=reset_hurt, daemon=True).start()
+
+    def set_animation_image(self, image_path: str) -> bool:
+        """Replace or set the animated character image at runtime.
+
+        Returns True on success, False otherwise.
+        """
+        try:
+            if not image_path or not os.path.exists(image_path):
+                print(f"set_animation_image: image not found: {image_path}")
+                return False
+            # create a new AnimatedCharacter using the same options as __init__
+            flip = (self.player_id == 1)
+            self.animated_char = AnimatedCharacter(
+                image_path=image_path,
+                scale=0.5,
+                enable_pixelate=True,
+                flip_horizontal=flip,
+            )
+            self.animated_char.set_position(int(self.pos.x), int(self.pos.y))
+            self.animated_char.set_pose('ready')
+            self.use_animation = True
+            return True
+        except Exception as e:
+            print(f"Failed to set animation image: {e}")
+            return False
 
 
 __all__ = ["Player"]

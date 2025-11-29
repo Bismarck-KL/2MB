@@ -1,4 +1,5 @@
 import pygame
+import os
 
 from utils.color import BG, TITLE, START_BASE, START_HOVER, QUIT_BASE, QUIT_HOVER, STATUS
 from utils.ui import Button
@@ -15,14 +16,15 @@ class MenuScene:
 
         # TO-DO(Qianrina): update the button layout, size and positions
         # button layout
-        btn_w, btn_h = 260, 96
+        btn_w, btn_h = 230, 96
         center_x = app.WIDTH // 2
         center_y = app.HEIGHT // 2
 
-        self.start_rect = pygame.Rect(center_x - btn_w - 20, center_y, btn_w, btn_h)
-        self.quit_rect = pygame.Rect(center_x + 20, center_y, btn_w, btn_h)
+        self.start_rect = pygame.Rect(80, 380, btn_w, btn_h)
+        self.quit_rect = pygame.Rect(80, 450, btn_w, btn_h)
 
         self.dev_game_rect = pygame.Rect(center_x + 20, center_y + btn_h + 20, btn_w, btn_h)
+        self.pose_editor_rect = pygame.Rect(center_x - btn_w - 20, center_y + btn_h + 20, btn_w, btn_h)
        
         # create Button components (images will be used if available)
         # get images defensively (loader may have set None for missing files)
@@ -59,6 +61,14 @@ class MenuScene:
             hover_color=START_HOVER,
             image=None,
         )
+        self.pose_editor_button = Button(
+            self.pose_editor_rect,
+            text="Pose Editor",
+            font=self.font,
+            base_color=START_BASE,
+            hover_color=START_HOVER,
+            image=None,
+        )
 
         self.started = False
 
@@ -70,7 +80,54 @@ class MenuScene:
             self.app.running = False
         if self.dev_game_button.handle_event(event):
             # switch to Game scene when Dev Game is clicked
-            self.app.change_scene("GameScene")
+            self.app.change_scene("TutorialScene")
+        if self.pose_editor_button.handle_event(event):
+            self.app.change_scene("PoseEditorScene")
+
+    def on_enter(self):
+        # play menu background music (prefer ResourceManager if available)
+        try:
+            # If ResourceManager has preloaded audio loaders, prefer using it
+            if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
+                try:
+                    print("MenuScene: playing music via ResourceManager")
+                    # finalize & play the named 'game' track (will fall back inside RM if missing)
+                    self.res_mgr.finalize_and_play('game')
+                except Exception:
+                    print("MenuScene: ResourceManager failed to play music, falling back to local mixer")
+                    # fall back to direct mixer below
+                    pass
+            else:
+                # ensure mixer is initialized then load and play the file directly
+                try:
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init()
+                except Exception:
+                    try:
+                        pygame.mixer.init()
+                    except Exception:
+                        pass
+
+                music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
+                if os.path.exists(music_path):
+                    try:
+                        pygame.mixer.music.load(music_path)
+                        pygame.mixer.music.set_volume(0.5)
+                        # fade in over 500ms
+                        pygame.mixer.music.play(-1, 0.0, 500)
+                    except Exception as e:
+                        print(f"MenuScene: failed to play music '{music_path}':", e)
+                else:
+                    print(f"MenuScene: music file not found: {music_path}")
+        except Exception:
+            pass
+
+    def on_exit(self):
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.music.fadeout(500)
+        except Exception:
+            pass
 
     def update(self, dt):
         pass
@@ -90,14 +147,15 @@ class MenuScene:
             self.screen.fill(BG)
 
         # title
-        title_surf = self.title_font.render("Main Menu", True, TITLE)
-        title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 - 140))
-        self.screen.blit(title_surf, title_rect)
+        #title_surf = self.title_font.render("Main Menu", True, TITLE)
+        #title_rect = title_surf.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2 - 140))
+        #self.screen.blit(title_surf, title_rect)
 
         mouse_pos = pygame.mouse.get_pos()
         self.start_button.draw(self.screen, mouse_pos)
         self.quit_button.draw(self.screen, mouse_pos)
-        self.dev_game_button.draw(self.screen, mouse_pos)
+        # self.dev_game_button.draw(self.screen, mouse_pos)
+        # self.pose_editor_button.draw(self.screen, mouse_pos)
 
         if self.started:
             status_surf = self.font.render("Started!", True, STATUS)

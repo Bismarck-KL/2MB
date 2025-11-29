@@ -5,8 +5,8 @@ Integrates the skeletal animation system into the 2MB game
 
 import pygame
 from collections import Counter
+import weakref
 
-from .body_parts import BodyParts
 from .skeleton import Skeleton, BodyPart
 from .animation import AnimationController
 from .body_parts_profiles import BodyPartsConfig
@@ -36,19 +36,99 @@ class AnimatedCharacter:
         self.position = [0, 0]  # 世界位置
         self.flip_horizontal = flip_horizontal
 
-        # 像素化設置
+        # 像素化設置 - 強制使用固定值
         self.enable_pixelate = enable_pixelate
-        self.pixel_size = 4
-        self.num_colors = 16
+        # 硬性設定：PIXEL = 6, COLOR = 32
+        self.pixel_size = 6
+        self.num_colors = 32
 
         # 用於渲染的離屏surface
         self.render_surface = None
         self.final_surface = None
 
+        # SFX paths and lazy cache. Prefer using an external ResourceManager
+        # when available (passed as `res_mgr`) so sounds are shared and cached.
+        self._sfx_paths = {
+            'punch': 'assets/sounds/punch sfx.mp3',
+            'kick': 'assets/sounds/kick sfx.mp3',
+            'jump': 'assets/sounds/jump sfx.mp3',
+            'hurt': 'assets/sounds/hurt sfx.mp3',
+            'block': 'assets/sounds/block sfx.mp3',
+        }
+        self._sfx_cache = {}
+        # optional ResourceManager instance (set when caller passes it)
+        self.res_mgr = None
+
+    def _load_sound(self, path):
+        try:
+            return pygame.mixer.Sound(path)
+        except Exception as e:
+            print(f"[SFX] Failed to load {path}: {e}")
+            return None
+
+    def set_resource_manager(self, res_mgr):
+        """Optionally provide a ResourceManager instance so this class
+        can ask it for shared sounds via `get_sound(path)`.
+        """
+        try:
+            self.res_mgr = res_mgr
+        except Exception:
+            self.res_mgr = None
+
+    def _get_sfx(self, name):
+        """Return a pygame.mixer.Sound for `name` (lazy, cached).
+
+        If a ResourceManager (`self.res_mgr`) is available, use
+        `res_mgr.get_sound(path)` so sounds are shared across objects.
+        """
+        path = self._sfx_paths.get(name)
+        if not path:
+            return None
+
+        # try resource manager first
+        if self.res_mgr:
+            try:
+                snd = self.res_mgr.get_sound(path)
+                if snd:
+                    return snd
+            except Exception:
+                pass
+
+        # fallback to local cache + load
+        snd = self._sfx_cache.get(name)
+        if snd is not None:
+            return snd
+
+        try:
+            snd = pygame.mixer.Sound(path)
+            self._sfx_cache[name] = snd
+            return snd
+        except Exception:
+            return None
+
     def _load_and_setup_skeleton(self, image_path):
         """載入圖片並建立骨骼系統"""
-        # 載入圖片
-        original_image = pygame.image.load(image_path).convert_alpha()
+        # 載入圖片 - prefer ResourceManager-provided surface when available
+        original_image = None
+        try:
+            if self.res_mgr:
+                try:
+                    original_image = self.res_mgr.get_image_by_path(image_path)
+                except Exception:
+                    original_image = None
+        except Exception:
+            original_image = None
+
+        if original_image is None:
+            try:
+                original_image = pygame.image.load(image_path)
+                try:
+                    original_image = original_image.convert_alpha()
+                except Exception:
+                    original_image = original_image.convert()
+            except Exception:
+                # loading failed; raise so callers can handle or fallback
+                raise
 
         # 獲取身體部位定義 - 自動根據圖片路徑選擇配置
         body_parts_def = BodyPartsConfig.from_image_path(image_path)
@@ -171,9 +251,24 @@ class AnimatedCharacter:
         # 創建動畫控制器
         self.animation_controller = AnimationController(self.skeleton)
 
+        # register instance in global weak registry so tools can broadcast updates
+        try:
+            GLOBAL_ANIM_CHAR_REGISTRY.add(self)
+            try:
+                print(f"[AnimatedCharacter] Registered instance: {repr(self)}")
+            except Exception:
+                print("[AnimatedCharacter] Registered instance")
+        except Exception:
+            pass
+
+        # NOTE: settings.json is intentionally ignored so pixel settings
+        # remain fixed to PIXEL=6, COLOR=32 as requested.
+
         # 應用初始姿勢並更新骨骼
         self.animation_controller.set_pose('ready', immediate=True)
         self.skeleton.update()
+
+        # Intentionally not applying persisted settings to enforce fixed pixel values.
 
     def set_position(self, x, y):
         """設置角色在遊戲世界中的位置"""
@@ -197,6 +292,14 @@ class AnimatedCharacter:
             action_name: 動作名稱
             duration: 動作持續時間（秒）- 目前由AnimationController自動控制
         """
+        # 播放對應聲效（lazy, 使用 ResourceManager 若可用）
+        snd = self._get_sfx(action_name)
+        if snd:
+            try:
+                snd.play()
+            except Exception:
+                # ignore sound playback errors
+                pass
         self.animation_controller.set_pose(action_name)
 
     def update(self, dt):
@@ -206,7 +309,12 @@ class AnimatedCharacter:
         Args:
             dt: Delta time (秒) - 目前AnimationController不使用dt，未來可能需要
         """
-        self.animation_controller.update()
+        # pass dt into the animation controller (now time-based)
+        try:
+            self.animation_controller.update(dt)
+        except TypeError:
+            # fallback if controller doesn't accept dt for some reason
+            self.animation_controller.update()
 
     def render(self, target_surface, offset=(0, 0)):
         """
@@ -233,6 +341,39 @@ class AnimatedCharacter:
         # 將骨骼位置設置到渲染surface的中心
         center_x = base_size[0] // 2
         center_y = base_size[1] // 2
+
+        # --- 根據腳距離動態繪製影子 ---
+        left_shin = self.skeleton.get_part('left_shin') if hasattr(self.skeleton, 'get_part') else None
+        right_shin = self.skeleton.get_part('right_shin') if hasattr(self.skeleton, 'get_part') else None
+        if left_shin and right_shin:
+            lx, ly = left_shin.world_position
+            rx, ry = right_shin.world_position
+            foot_dist = abs(rx - lx)
+            shadow_width = max(int(foot_dist * 1.2), int(80 * self.scale))
+            shadow_height = int(40 * self.scale)
+            # 轉換到 render_surface 座標
+            root_x, root_y = self.skeleton.root.world_position
+            avg_x = (lx + rx) / 2
+            avg_y = (ly + ry) / 2
+            rel_x = center_x + (avg_x - root_x) - shadow_width // 2
+            rel_y = center_y + (avg_y - root_y) - shadow_height // 2
+            rel_y -= 15  # 向上偏移 15 pixel
+            # fallback: 如果影子超出 render surface，則用預設位置
+            if not (0 <= rel_x <= self.render_surface.get_width() - shadow_width and 0 <= rel_y <= self.render_surface.get_height() - shadow_height):
+                rel_x = center_x - shadow_width // 2
+                rel_y = center_y + 320 - shadow_height // 2
+                rel_y -= 15  # 向上偏移 15 pixel
+            shadow_x = int(rel_x)
+            shadow_y = int(rel_y)
+        else:
+            shadow_width = int(120 * self.scale)
+            shadow_height = int(40 * self.scale)
+            shadow_x = center_x - shadow_width // 2
+            shadow_y = center_y + 320 - shadow_height // 2
+        shadow_color = (0, 0, 0, 80)  # 半透明黑色
+        shadow_surface = pygame.Surface((shadow_width, shadow_height), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_surface, shadow_color, (0, 0, shadow_width, shadow_height))
+        self.render_surface.blit(shadow_surface, (shadow_x, shadow_y))
 
         # 保存原始位置
         original_offset = self.skeleton.root_offset[:]
@@ -384,7 +525,8 @@ class AnimatedCharacter:
 
     def set_pixel_size(self, size):
         """設置像素大小 (2-16)"""
-        self.pixel_size = max(2, min(16, size))
+        # allow up to 32 to match editor slider range
+        self.pixel_size = max(2, min(32, size))
 
     def set_color_palette(self, num_colors):
         """設置調色板大小 (4-32)"""
@@ -392,3 +534,51 @@ class AnimatedCharacter:
 
 
 __all__ = ['AnimatedCharacter']
+
+# Global weak registry for live AnimatedCharacter instances
+try:
+    GLOBAL_ANIM_CHAR_REGISTRY = weakref.WeakSet()
+except Exception:
+    GLOBAL_ANIM_CHAR_REGISTRY = set()
+
+
+def apply_global_pixel_settings(pixel_size: int = None, num_colors: int = None):
+    """Apply pixel settings to all live AnimatedCharacter instances.
+
+    This is a convenience used by editor tools to update existing characters
+    without recreating scenes.
+    """
+    print(f"[apply_global_pixel_settings] called with pixel_size={pixel_size}, num_colors={num_colors}")
+    applied = 0
+    try:
+        regs = list(GLOBAL_ANIM_CHAR_REGISTRY)
+        print(f"[apply_global_pixel_settings] registry contains {len(regs)} entries")
+        for inst in regs:
+            try:
+                try:
+                    ident = repr(inst)
+                except Exception:
+                    ident = str(type(inst))
+                print(f"[apply_global_pixel_settings] applying to instance: {ident}")
+                if pixel_size is not None:
+                    try:
+                        inst.set_pixel_size(int(pixel_size))
+                    except Exception:
+                        inst.pixel_size = int(pixel_size)
+                if num_colors is not None:
+                    try:
+                        inst.set_color_palette(int(num_colors))
+                    except Exception:
+                        inst.num_colors = int(num_colors)
+                applied += 1
+            except Exception as e:
+                print(f"[apply_global_pixel_settings] error applying to instance: {e}")
+                pass
+    except Exception as e:
+        print(f"[apply_global_pixel_settings] error iterating registry: {e}")
+        pass
+    try:
+        print(f"[apply_global_pixel_settings] applied to {applied} instances")
+    except Exception:
+        pass
+    return applied

@@ -24,7 +24,6 @@ class BackgroundMusicLoader:
     """
 
     def __init__(self, path: Optional[str] = None, volume: float = 0.5, init_mixer: bool = False):
-        # TO-DO: unpdate the bgm
         self.path = path or os.path.join('assets', 'sounds', 'bgm.mp3')
         self.volume = float(volume)
         # init_mixer controls whether finalize() will call pygame.mixer.init();
@@ -62,12 +61,24 @@ class BackgroundMusicLoader:
 
     def play(self, loop: bool = True) -> None:
         """Start playback. Call on main thread after load completes."""
+        # Debug help: print state so callers can see whether play() was
+        # invoked after a successful finalize(). This is helpful when
+        # diagnosing why no audio is produced on some platforms.
+        try:
+            print(f"BackgroundMusicLoader.play: _loaded={self._loaded}, path={self.path}")
+        except Exception:
+            pass
+
         if not self._loaded:
             # nothing loaded into mixer
             return
 
         loops = -1 if loop else 0
-        pygame.mixer.music.play(loops=loops)
+        try:
+            pygame.mixer.music.play(loops=loops)
+        except Exception:
+            # best-effort: ignore playback errors and let caller handle logging
+            pass
 
     def finalize(self) -> None:
         """Finalize loading on the main thread: initialize mixer and load data.
@@ -83,10 +94,10 @@ class BackgroundMusicLoader:
             if self.init_mixer:
                 pygame.mixer.init()
             else:
-                # ensure mixer is initialized
-                try:
-                    pygame.mixer.get_init()
-                except Exception:
+                # ensure mixer is initialized (get_init returns None when not
+                # initialized; it does not raise). If not initialized, call
+                # pygame.mixer.init() on the main thread.
+                if not pygame.mixer.get_init():
                     pygame.mixer.init()
         except Exception:
             # best-effort: continue and let load raise if unsupported
@@ -94,12 +105,41 @@ class BackgroundMusicLoader:
 
         try:
             import io
+            import tempfile
 
             buf = io.BytesIO(self._raw_bytes)
-            # pygame.mixer.music.load accepts a file-like object in many setups
-            pygame.mixer.music.load(buf)
-            pygame.mixer.music.set_volume(self.volume)
-            self._loaded = True
+            try:
+                # Try loading from an in-memory buffer first (works on many
+                # pygame builds). If this fails (some SDL builds don't accept
+                # file-like objects), fall back to a temporary file.
+                pygame.mixer.music.load(buf)
+                pygame.mixer.music.set_volume(self.volume)
+                self._loaded = True
+            except Exception:
+                # Fallback: write bytes to a temporary file and load by path.
+                try:
+                    # NamedTemporaryFile on Windows cannot be reopened while open,
+                    # so create a temp file, close it, write, and then load.
+                    tf = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(self.path)[1])
+                    try:
+                        tf.write(self._raw_bytes)
+                        tf.flush()
+                        tf_name = tf.name
+                    finally:
+                        tf.close()
+                    try:
+                        pygame.mixer.music.load(tf_name)
+                        pygame.mixer.music.set_volume(self.volume)
+                        self._loaded = True
+                    finally:
+                        try:
+                            os.unlink(tf_name)
+                        except Exception:
+                            pass
+                except Exception:
+                    # If fallback fails, re-raise to let caller know finalize
+                    # could not complete.
+                    raise
         finally:
             # free raw bytes
             self._raw_bytes = None
