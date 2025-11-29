@@ -154,8 +154,8 @@ class MenuScene:
         mouse_pos = pygame.mouse.get_pos()
         self.start_button.draw(self.screen, mouse_pos)
         self.quit_button.draw(self.screen, mouse_pos)
-        self.dev_game_button.draw(self.screen, mouse_pos)
-        self.pose_editor_button.draw(self.screen, mouse_pos)
+        # self.dev_game_button.draw(self.screen, mouse_pos)
+        # self.pose_editor_button.draw(self.screen, mouse_pos)
 
         if self.started:
             status_surf = self.font.render("Started!", True, STATUS)
