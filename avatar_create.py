@@ -1,4 +1,5 @@
 import pygame
+
 try:
     import cv2
 except ImportError:
@@ -45,6 +46,12 @@ class AvatarCreateScene:
         except Exception:
             back_img = None
 
+        # next button image
+        try:
+            next_img = self.res_mgr.get_image("btn_next")
+        except Exception:
+            next_img = None
+
         # back button (top-left)
         self.back_rect = pygame.Rect(20, 20, 140, 48)
         self.back_button = Button(
@@ -67,6 +74,7 @@ class AvatarCreateScene:
             font=self.font,
             base_color=NEXT_BASE,
             hover_color=NEXT_HOVER,
+            image=next_img,
         )
 
         # which player are we capturing (1 or 2)
@@ -113,17 +121,22 @@ class AvatarCreateScene:
 
         # initial attempt to load (may be refreshed later when capture starts)
         try:
-            self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(self.current_player)
+            self.guide_surf, self.guide_outline_surf = self._load_guide_from_disk(
+                self.current_player
+            )
         except Exception:
             self.guide_surf = None
             self.guide_outline_surf = None
+
     def on_enter(self):
         # play menu/background music for this scene (prefer ResourceManager)
         try:
-            if hasattr(self, 'res_mgr') and getattr(self.res_mgr, 'audio_loaders', None):
+            if hasattr(self, "res_mgr") and getattr(
+                self.res_mgr, "audio_loaders", None
+            ):
                 try:
                     # prefer the named 'game' track
-                    self.res_mgr.finalize_and_play('game')
+                    self.res_mgr.finalize_and_play("game")
                 except Exception:
                     # fall back to local mixer below
                     pass
@@ -137,7 +150,7 @@ class AvatarCreateScene:
                     except Exception:
                         pass
 
-                music_path = os.path.join('assets', 'sounds', 'game_bgm.mp3')
+                music_path = os.path.join("assets", "sounds", "game_bgm.mp3")
                 if os.path.exists(music_path):
                     try:
                         pygame.mixer.music.load(music_path)
@@ -145,7 +158,10 @@ class AvatarCreateScene:
                         # fade in over 500ms
                         pygame.mixer.music.play(-1, 0.0, 500)
                     except Exception as e:
-                        print(f"AvatarCreateScene: failed to play music '{music_path}':", e)
+                        print(
+                            f"AvatarCreateScene: failed to play music '{music_path}':",
+                            e,
+                        )
                 else:
                     print(f"AvatarCreateScene: music file not found: {music_path}")
         except Exception:
@@ -157,6 +173,7 @@ class AvatarCreateScene:
                 pygame.mixer.music.fadeout(500)
         except Exception:
             pass
+
     def _load_guide_from_disk(self, player=1):
         try:
             base_dir = os.path.join("assets", "photo", f"player{player}")
@@ -170,7 +187,10 @@ class AvatarCreateScene:
                 if os.path.isdir(base_dir):
                     for name in os.listdir(base_dir):
                         low = name.lower()
-                        if low.endswith((".png", ".jpg", ".jpeg", ".webp")) and "guide" in low:
+                        if (
+                            low.endswith((".png", ".jpg", ".jpeg", ".webp"))
+                            and "guide" in low
+                        ):
                             guide_path = os.path.join(base_dir, name)
                             break
                     # if still not found, pick any image
@@ -191,7 +211,9 @@ class AvatarCreateScene:
             try:
                 if getattr(self, "res_mgr", None):
                     try:
-                        guide = self.res_mgr.get_image_by_path(os.path.abspath(guide_path))
+                        guide = self.res_mgr.get_image_by_path(
+                            os.path.abspath(guide_path)
+                        )
                         if guide:
                             loader_used = "res_mgr"
                     except Exception:
@@ -201,7 +223,9 @@ class AvatarCreateScene:
 
             if guide is None:
                 try:
-                    guide = pygame.image.load(os.path.abspath(guide_path)).convert_alpha()
+                    guide = pygame.image.load(
+                        os.path.abspath(guide_path)
+                    ).convert_alpha()
                     loader_used = "pygame.convert_alpha"
                 except Exception:
                     try:
@@ -220,11 +244,17 @@ class AvatarCreateScene:
                             img_rgba = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
                         else:
                             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                            alpha = np.full((img_rgb.shape[0], img_rgb.shape[1], 1), 255, dtype=np.uint8)
+                            alpha = np.full(
+                                (img_rgb.shape[0], img_rgb.shape[1], 1),
+                                255,
+                                dtype=np.uint8,
+                            )
                             img_rgba = np.concatenate([img_rgb, alpha], axis=2)
                         h, w = img_rgba.shape[:2]
                         try:
-                            guide = pygame.image.frombuffer(img_rgba.tobytes(), (w, h), "RGBA")
+                            guide = pygame.image.frombuffer(
+                                img_rgba.tobytes(), (w, h), "RGBA"
+                            )
                             loader_used = "cv2_frombuffer"
                         except Exception:
                             guide = None
@@ -250,7 +280,9 @@ class AvatarCreateScene:
                     outline = np.zeros((h, w, 4), dtype=np.uint8)
                     outline[edges > 0] = [255, 255, 255, 255]
                     try:
-                        guide_outline = pygame.image.frombuffer(outline.tobytes(), (w, h), "RGBA")
+                        guide_outline = pygame.image.frombuffer(
+                            outline.tobytes(), (w, h), "RGBA"
+                        )
                     except Exception:
                         guide_outline = None
             except Exception:
@@ -528,7 +560,7 @@ class AvatarCreateScene:
             self.next_button.draw(self.screen, mouse_pos)
 
         # draw capture photo button (hidden once 'Next' is available)
-        if not getattr(self, 'is_ready_to_next', False):
+        if not getattr(self, "is_ready_to_next", False):
             self.capture_button.draw(self.screen, mouse_pos)
 
         # if in capture mode, draw camera preview UI
@@ -795,7 +827,9 @@ class AvatarCreateScene:
                             report(30)
                             try:
                                 blurred = cv2.GaussianBlur(img_resized, (0, 0), 3)
-                                sharpened = cv2.addWeighted(img_resized, 1.5, blurred, -0.5, 0)
+                                sharpened = cv2.addWeighted(
+                                    img_resized, 1.5, blurred, -0.5, 0
+                                )
                                 cv2.imwrite(save_path, sharpened)
                             except Exception:
                                 cv2.imwrite(save_path, img_resized)
@@ -812,7 +846,9 @@ class AvatarCreateScene:
                     # try background removal (pure OpenCV) to make tpose.png
                     ok = False
                     try:
-                        ok = self._remove_background(save_path, tpose_path, target_w, target_h)
+                        ok = self._remove_background(
+                            save_path, tpose_path, target_w, target_h
+                        )
                     except Exception:
                         ok = False
 
@@ -820,7 +856,11 @@ class AvatarCreateScene:
                         try:
                             img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
                             if img_cv is not None:
-                                resized = cv2.resize(img_cv, (target_w, target_h), interpolation=cv2.INTER_CUBIC)
+                                resized = cv2.resize(
+                                    img_cv,
+                                    (target_w, target_h),
+                                    interpolation=cv2.INTER_CUBIC,
+                                )
                                 cv2.imwrite(tpose_path, resized)
                             else:
                                 shutil.copyfile(save_path, tpose_path)
@@ -849,7 +889,9 @@ class AvatarCreateScene:
                 if self.current_player == 1:
                     try:
                         self.current_player = 2
-                        self.capture_button.text = f"拍照成為Player{self.current_player}"
+                        self.capture_button.text = (
+                            f"拍照成為Player{self.current_player}"
+                        )
                         # ensure preview flags are off
                         self.show_preview = False
                         self.preview_surf = None
