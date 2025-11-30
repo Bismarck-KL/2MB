@@ -14,7 +14,7 @@ class MenuScene:
         self.res_mgr = app.res_mgr
 
 
-        # TO-DO(Qianrina): update the button layout, size and positions
+        
         # button layout
         btn_w, btn_h = 230, 96
         center_x = app.WIDTH // 2
