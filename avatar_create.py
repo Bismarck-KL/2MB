@@ -21,6 +21,7 @@ from utils.color import (
     CAPTURE_HOVER,
     BLACK,
     HINT_TEXT,
+    WHITE,
 )
 from utils.loading import run_loading_with_callback
 from utils.ui import Button
@@ -81,7 +82,7 @@ class AvatarCreateScene:
         self.current_player = 1
 
         # capture photo button (center)
-        capture_w, capture_h = 180, 56
+        capture_w, capture_h = 460, 56
         capture_x = (self.app.WIDTH - capture_w) // 2
         capture_y = self.app.HEIGHT // 2 + 80
         self.capture_rect = pygame.Rect(capture_x, capture_y, capture_w, capture_h)
@@ -736,11 +737,12 @@ class AvatarCreateScene:
                         secs = max(0, int(math.ceil(remaining)))
                         # print("Auto-capture in:", secs, "seconds")
                         cd_txt = self.title_font.render(
-                            f"Auto capture in: {secs}s", True, BLACK
+                            f"Auto capture in: {secs}s", True, WHITE
+                            
                         )
                         # place countdown near the top of the preview box for visibility
                         cd_rect = cd_txt.get_rect(
-                            center=(self.app.WIDTH // 2, box_top + 18)
+                            center=(self.app.WIDTH // 2, box_top + 68)
                         )
                         self.screen.blit(cd_txt, cd_rect)
                 except Exception:
