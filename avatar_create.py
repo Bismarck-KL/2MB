@@ -87,7 +87,7 @@ class AvatarCreateScene:
         self.capture_rect = pygame.Rect(capture_x, capture_y, capture_w, capture_h)
         self.capture_button = Button(
             self.capture_rect,
-            text=f"拍照成為Player{self.current_player}",
+            text=f"Capture to become Player {self.current_player}",
             font=self.font,
             base_color=CAPTURE_BASE,
             hover_color=CAPTURE_HOVER,
@@ -313,7 +313,7 @@ class AvatarCreateScene:
                     # update capture button label
                     try:
                         self.capture_button.text = (
-                            f"拍照成為Player{self.current_player}"
+                            f"Capture to become Player {self.current_player}"
                         )
                     except Exception:
                         pass
@@ -613,7 +613,7 @@ class AvatarCreateScene:
                         overlay_surf.fill((0, 0, 0, 180))
 
                     # header text (larger) with subtle shadow for contrast
-                    header_text = f"拍攝中：Player {self.current_player}"
+                    header_text = f"Capturing: Player {self.current_player}"
                     header_surf = self.title_font.render(
                         header_text, True, (255, 255, 255)
                     )
@@ -625,9 +625,9 @@ class AvatarCreateScene:
 
                     # explanatory note (smaller)
                     if self.current_player == 1:
-                        note = "完成後會自動切換到 Player 2，請準備好下一位。"
+                        note = "After confirming, it will automatically switch to Player 2. Please prepare the next player."
                     else:
-                        note = "已拍攝 Player 2，完成後會回到建立畫面。"
+                        note = "Player 2 has been captured. After completion, it will return to the creation screen."
                     note_surf = self.font.render(note, True, (230, 230, 230))
                     note_shadow = self.font.render(note, True, (0, 0, 0))
                     n_x = 12
@@ -663,7 +663,7 @@ class AvatarCreateScene:
                         self.screen.blit(pv, (pv_x, pv_y))
                         # hint text
                         hint = self.font.render(
-                            "確認角色後按 Next 前往 Player2 拍照", True, HINT_TEXT
+                            "After confirming the character, press Next to proceed to Player 2 capture", True, HINT_TEXT
                         )
                         self.screen.blit(
                             hint,
@@ -773,7 +773,7 @@ class AvatarCreateScene:
                 self.screen.blit(bg, (pv_x - 4, pv_y - 4))
                 self.screen.blit(pv, (pv_x, pv_y))
                 hint = self.font.render(
-                    "確認角色後按 Next 前往 Player2 拍照", True, HINT_TEXT
+                    "After confirming the character, press Next to proceed to Player 2 capture", True, HINT_TEXT
                 )
                 self.screen.blit(
                     hint,
