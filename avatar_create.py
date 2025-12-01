@@ -615,7 +615,7 @@ class AvatarCreateScene:
                     # header text (larger) with subtle shadow for contrast
                     header_text = f"Capturing: Player {self.current_player}"
                     header_surf = self.title_font.render(
-                        header_text, True, (255, 255, 255)
+                        header_text, True, WHITE
                     )
                     shadow = self.title_font.render(header_text, True, (0, 0, 0))
                     h_x = 12
