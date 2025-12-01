@@ -19,7 +19,6 @@ from utils.color import (
     NEXT_HOVER,
     CAPTURE_BASE,
     CAPTURE_HOVER,
-    BLACK,
     HINT_TEXT,
     WHITE,
 )
