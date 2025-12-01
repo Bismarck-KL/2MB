@@ -908,6 +908,10 @@ class AvatarCreateScene:
                         self.show_preview = False
                         self.preview_surf = None
                         self.preview_path = None
+
+                        # auto go to TutorialScene after
+                        self.app.change_scene("TutorialScene")   
+
                     except Exception:
                         pass
 
