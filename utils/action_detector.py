@@ -195,7 +195,9 @@ class ActionDetector:
                     shoulder_pt = left_shoulder if player_id == 0 else right_shoulder
                     wrist_pt = left_wrist if player_id == 0 else right_wrist
                     extended_ok = True
+                    # print("[Develop Log] Punch detected, checking elbow extension")
                     if elbow and shoulder_pt and wrist_pt:
+                        # print("[Develop Log] Calculating elbow angle for extension check")  
                         ax = shoulder_pt[0] - elbow[0]
                         ay = shoulder_pt[1] - elbow[1]
                         bx = wrist_pt[0] - elbow[0]
@@ -247,6 +249,16 @@ class ActionDetector:
                     except Exception:
                         pass
                     return
+
+            # No action detected for this set of landmarks -> mark READY
+            try:
+                if mc and hasattr(mc, 'set_latest_action'):
+                    try:
+                        mc.set_latest_action(player_id, 'READY')
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
         # If a mediapipe_capture singleton exists, poll it for landmarks
         if self._use_mc:
