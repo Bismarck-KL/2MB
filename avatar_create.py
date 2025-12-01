@@ -87,7 +87,7 @@ class AvatarCreateScene:
         self.capture_rect = pygame.Rect(capture_x, capture_y, capture_w, capture_h)
         self.capture_button = Button(
             self.capture_rect,
-            text=f"Capture to become Player {self.current_player}",
+            text=f"Capture Player {self.current_player}",
             font=self.font,
             base_color=CAPTURE_BASE,
             hover_color=CAPTURE_HOVER,
@@ -313,7 +313,7 @@ class AvatarCreateScene:
                     # update capture button label
                     try:
                         self.capture_button.text = (
-                            f"Capture to become Player {self.current_player}"
+                            f"Capture Player {self.current_player}"
                         )
                     except Exception:
                         pass
@@ -547,7 +547,7 @@ class AvatarCreateScene:
             self.screen.fill(BG)
 
         # simple visual
-        txt = self.title_font.render("Avatar Create Scene", True, TITLE)
+        txt = self.title_font.render("Create Your Own Avatar", True, TITLE)
         rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
         self.screen.blit(txt, rect)
 
@@ -843,33 +843,23 @@ class AvatarCreateScene:
                             pass
 
                     report(60)
-
-                    # try background removal (pure OpenCV) to make tpose.png
-                    ok = False
+                    # Disabled: background removal (always copy/resize original image for tpose.png)
                     try:
-                        ok = self._remove_background(
-                            save_path, tpose_path, target_w, target_h
-                        )
+                        img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+                        if img_cv is not None:
+                            resized = cv2.resize(
+                                img_cv,
+                                (target_w, target_h),
+                                interpolation=cv2.INTER_CUBIC,
+                            )
+                            cv2.imwrite(tpose_path, resized)
+                        else:
+                            shutil.copyfile(save_path, tpose_path)
                     except Exception:
-                        ok = False
-
-                    if not ok:
                         try:
-                            img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
-                            if img_cv is not None:
-                                resized = cv2.resize(
-                                    img_cv,
-                                    (target_w, target_h),
-                                    interpolation=cv2.INTER_CUBIC,
-                                )
-                                cv2.imwrite(tpose_path, resized)
-                            else:
-                                shutil.copyfile(save_path, tpose_path)
+                            shutil.copyfile(save_path, tpose_path)
                         except Exception:
-                            try:
-                                shutil.copyfile(save_path, tpose_path)
-                            except Exception:
-                                pass
+                            pass
 
                     report(100)
                 except Exception as e:
@@ -891,7 +881,7 @@ class AvatarCreateScene:
                     try:
                         self.current_player = 2
                         self.capture_button.text = (
-                            f"Capture to become Player {self.current_player}"
+                            f"Capture Player {self.current_player}"
                         )
                         # ensure preview flags are off
                         self.show_preview = False
