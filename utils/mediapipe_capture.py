@@ -207,6 +207,40 @@ class _MediapipeCapture:
         except Exception:
             pass
 
+        # If capture thread is already running, prefer to wait for it to deliver
+        # a few frames instead of opening a second VideoCapture which may fail
+        # on platforms that don't allow multiple opens. This makes it possible
+        # to start the capture first (show preview) and then run this loader
+        # while the preview is visible.
+        if self._running:
+            # wait for up to ~3 seconds for latest frames to appear
+            waited = 0.0
+            poll_interval = 0.1
+            max_wait = 3.0
+            frames_seen = 0
+            while waited < max_wait:
+                if stop_event is not None and stop_event.is_set():
+                    break
+                with self._latest_lock:
+                    has = self._latest is not None
+                if has:
+                    frames_seen += 1
+                    try:
+                        # report progress as we observe frames
+                        report(5.0 + min(95.0, (frames_seen / 6.0) * 95.0))
+                    except Exception:
+                        pass
+                    if frames_seen >= 3:
+                        break
+                time.sleep(poll_interval)
+                waited += poll_interval
+
+            try:
+                report(100.0)
+            except Exception:
+                pass
+            return
+
         # stop early if requested
         if stop_event is not None and stop_event.is_set():
             return
