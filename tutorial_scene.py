@@ -15,7 +15,7 @@ class TutorialScene:
         self.res_mgr = app.res_mgr
 
 
-        # TO-DO(Qianrina): update the button layout, size and positions
+        
         # button layout
         start_btn_w, start_btn_h = 168, 78
         back_btn_w, back_btn_h = 168, 78
