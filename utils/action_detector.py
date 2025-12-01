@@ -2,13 +2,13 @@
 
 This module provides ActionDetector which runs a background thread
 capturing camera frames and uses heuristics on pose landmarks to detect
-three actions: 'punch', 'kick', and 'jump'. When an action is detected it
-invokes a provided callback with (player_id, action_name).
+three actions: 'punch', 'kick', 'jump', and 'block'. When an action is
+detected it invokes a provided callback with (player_id, action_name).
 
-Heuristics are intentionally simple and tuned for two players standing
-side-by-side: which player produced the action is decided by the
-x-coordinate of the nose landmark (left half -> player 0, right half ->
-player 1). Use cooldowns to avoid repeated triggers.
+It supports a low-cost multi-person approach by running the single-person
+MediaPipe Pose on left/right crops. If the project's
+`utils/mediapipe_capture` singleton exists, ActionDetector will prefer to
+read landmarks from it instead of opening the camera directly.
 """
 from __future__ import annotations
 
@@ -17,14 +17,12 @@ import time
 from typing import Callable, Optional, Tuple
 import cv2
 import math
+
 try:
     import mediapipe as mp
 except Exception:
     mp = None
 
-# attempt to reuse the mediapipe_capture singleton if available so we don't
-# open multiple VideoCapture devices. This avoids camera contention that
-# causes `cap.read()` to fail when another process already holds the camera.
 try:
     import utils.mediapipe_capture as mc
 except Exception:
@@ -33,37 +31,33 @@ except Exception:
 
 class ActionDetector:
     def __init__(self, callback: Callable[[int, str], None], camera_index: int = 0):
-        """callback(player_id, action_name)"""
+        """Create an ActionDetector.
+
+        callback: function(player_id: int, action_name: str)
+        camera_index: index passed to cv2.VideoCapture when not using mediapipe_capture
+        """
         self.callback = callback
         self.camera_index = camera_index
         self._running = False
         self._thread: Optional[threading.Thread] = None
 
-        # if a mediapipe_capture singleton is available we will prefer
-        # reading its latest landmarks rather than opening our own camera.
         self._use_mc = False
 
-        # state per player
+        # per-player state
         self._last_wrist_x = {0: None, 1: None}
         self._last_time = {0: None, 1: None}
         self._cooldown_until = {0: 0.0, 1: 0.0}
+        self._hip_baseline = {0: None, 1: None}
 
         # thresholds (tweak as needed)
-        self.punch_vel_threshold = 0.15  # normalized x/sec
-        self.punch_disp_threshold = 0.08  # normalized displacement from shoulder
-        self.kick_height_threshold = 0.10  # ankle above hip (normalized)
-        self.jump_height_threshold = 0.12  # hip y decrease from baseline
+        self.punch_vel_threshold = 0.15
+        self.punch_disp_threshold = 0.08
+        self.kick_height_threshold = 0.10
+        self.jump_height_threshold = 0.12
         self.cooldown_seconds = 0.6
-        # block detection thresholds
         self.block_wrist_dist_threshold = 0.08
         self.block_chest_y_thresh = 0.16
-        # elbow extension threshold (dot product) for punch validation
-        # when elbow is near fully extended the vectors shoulder->elbow and wrist->elbow
-        # point roughly opposite so the dot product normalized is near -1.0
         self.elbow_extension_cos_threshold = -0.8
-
-        # baseline hip y for jump detection (per player)
-        self._hip_baseline = {0: None, 1: None}
 
     def start(self):
         if self._running:
@@ -71,7 +65,6 @@ class ActionDetector:
         if mp is None:
             print("ActionDetector: mediapipe not available")
             return
-        # prefer using mediapipe_capture's landmarks if present
         try:
             if mc and hasattr(mc, 'get_latest_landmarks'):
                 self._use_mc = True
@@ -91,10 +84,163 @@ class ActionDetector:
     def _run(self):
         mp_pose = mp.solutions.pose
 
+        def _get_point(lm_list, idx: int) -> Optional[Tuple[float, float]]:
+            try:
+                v = lm_list[idx]
+                return (v[0], v[1])
+            except Exception:
+                return None
+
+        def _run_detection_for_landmarks(lm_list: list, assumed_player: Optional[int] = None):
+            # lm_list is a sequence of (x,y) normalized to full-frame coordinates
+            nose = _get_point(lm_list, mp_pose.PoseLandmark.NOSE.value)
+            left_shoulder = _get_point(lm_list, mp_pose.PoseLandmark.LEFT_SHOULDER.value)
+            right_shoulder = _get_point(lm_list, mp_pose.PoseLandmark.RIGHT_SHOULDER.value)
+            left_wrist = _get_point(lm_list, mp_pose.PoseLandmark.LEFT_WRIST.value)
+            right_wrist = _get_point(lm_list, mp_pose.PoseLandmark.RIGHT_WRIST.value)
+            left_elbow = _get_point(lm_list, mp_pose.PoseLandmark.LEFT_ELBOW.value)
+            right_elbow = _get_point(lm_list, mp_pose.PoseLandmark.RIGHT_ELBOW.value)
+            left_hip = _get_point(lm_list, mp_pose.PoseLandmark.LEFT_HIP.value)
+            right_hip = _get_point(lm_list, mp_pose.PoseLandmark.RIGHT_HIP.value)
+            left_ankle = _get_point(lm_list, mp_pose.PoseLandmark.LEFT_ANKLE.value)
+            right_ankle = _get_point(lm_list, mp_pose.PoseLandmark.RIGHT_ANKLE.value)
+
+            now = time.time()
+
+            # decide player id
+            if assumed_player is not None:
+                player_id = assumed_player
+            else:
+                if nose is None:
+                    return
+                player_id = 0 if nose[0] < 0.5 else 1
+
+            if player_id == 0:
+                shoulder = left_shoulder
+                wrist = left_wrist
+                hip = left_hip
+                ankle = left_ankle
+                left_el = left_elbow
+                right_el = right_elbow
+                facing_dir = 1.0
+            else:
+                shoulder = right_shoulder
+                wrist = right_wrist
+                hip = right_hip
+                ankle = right_ankle
+                left_el = left_elbow
+                right_el = right_elbow
+                facing_dir = -1.0
+
+            # init baseline
+            if hip and self._hip_baseline[player_id] is None:
+                self._hip_baseline[player_id] = hip[1]
+
+            prev_x = self._last_wrist_x[player_id]
+            prev_t = self._last_time[player_id]
+            self._last_time[player_id] = now
+            if wrist:
+                self._last_wrist_x[player_id] = wrist[0]
+
+            vel_x = 0.0
+            if prev_x is not None and prev_t is not None and wrist:
+                dt = max(1e-3, now - prev_t)
+                vel_x = (wrist[0] - prev_x) / dt
+
+            if now < self._cooldown_until[player_id]:
+                return
+
+            # BLOCK detection
+            try:
+                lw = left_wrist
+                rw = right_wrist
+                ls = left_shoulder
+                rs = right_shoulder
+                if lw and rw and ls and rs:
+                    dist = math.hypot(lw[0] - rw[0], lw[1] - rw[1])
+                    shoulder_y = 0.5 * (ls[1] + rs[1])
+                    wrist_y_avg = 0.5 * (lw[1] + rw[1])
+                    if dist < self.block_wrist_dist_threshold and abs(wrist_y_avg - shoulder_y) < self.block_chest_y_thresh:
+                        self._cooldown_until[player_id] = now + self.cooldown_seconds
+                        try:
+                            self.callback(player_id, 'block')
+                            if mc and hasattr(mc, 'set_latest_action'):
+                                try:
+                                    mc.set_latest_action(player_id, 'BLOCK')
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        return
+            except Exception:
+                pass
+
+            # PUNCH detection
+            punch_disp = None
+            if wrist and shoulder:
+                punch_disp = (wrist[0] - shoulder[0]) * facing_dir
+
+            if punch_disp is not None and punch_disp > self.punch_disp_threshold and vel_x * facing_dir > self.punch_vel_threshold:
+                try:
+                    elbow = left_el if player_id == 0 else right_el
+                    shoulder_pt = left_shoulder if player_id == 0 else right_shoulder
+                    wrist_pt = left_wrist if player_id == 0 else right_wrist
+                    extended_ok = True
+                    if elbow and shoulder_pt and wrist_pt:
+                        ax = shoulder_pt[0] - elbow[0]
+                        ay = shoulder_pt[1] - elbow[1]
+                        bx = wrist_pt[0] - elbow[0]
+                        by = wrist_pt[1] - elbow[1]
+                        na = math.hypot(ax, ay)
+                        nb = math.hypot(bx, by)
+                        if na > 1e-6 and nb > 1e-6:
+                            dot = (ax * bx + ay * by) / (na * nb)
+                            extended_ok = (dot < self.elbow_extension_cos_threshold)
+                    if not extended_ok:
+                        return
+
+                    self._cooldown_until[player_id] = now + self.cooldown_seconds
+                    try:
+                        self.callback(player_id, 'punch')
+                        if mc and hasattr(mc, 'set_latest_action'):
+                            try:
+                                mc.set_latest_action(player_id, 'PUNCH')
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    return
+                except Exception:
+                    try:
+                        self._cooldown_until[player_id] = now + self.cooldown_seconds
+                        self.callback(player_id, 'punch')
+                    except Exception:
+                        pass
+                    return
+
+            # KICK detection
+            if ankle and hip:
+                if (hip[1] - ankle[1]) > self.kick_height_threshold:
+                    self._cooldown_until[player_id] = now + self.cooldown_seconds
+                    try:
+                        self.callback(player_id, 'kick')
+                    except Exception:
+                        pass
+                    return
+
+            # JUMP detection
+            baseline = self._hip_baseline[player_id]
+            if hip and baseline is not None:
+                if (baseline - hip[1]) > self.jump_height_threshold:
+                    self._cooldown_until[player_id] = now + self.cooldown_seconds
+                    try:
+                        self.callback(player_id, 'jump')
+                    except Exception:
+                        pass
+                    return
+
+        # If a mediapipe_capture singleton exists, poll it for landmarks
         if self._use_mc:
-            # Use mediapipe_capture singleton's landmarks rather than opening
-            # a second VideoCapture. This polling approach avoids device lock
-            # conflicts on single-camera systems.
             while self._running:
                 try:
                     latest = None
@@ -108,334 +254,67 @@ class ActionDetector:
                         continue
 
                     lm_list = latest['landmarks']
-
-                    # helper to read landmark safely from lm_list (list of (x,y))
-                    def L(idx: int) -> Optional[Tuple[float, float]]:
-                        try:
-                            v = lm_list[idx]
-                            return (v[0], v[1])
-                        except Exception:
-                            return None
-
-                    # keypoints we use
-                    nose = L(mp_pose.PoseLandmark.NOSE.value)
-                    left_shoulder = L(mp_pose.PoseLandmark.LEFT_SHOULDER.value)
-                    right_shoulder = L(mp_pose.PoseLandmark.RIGHT_SHOULDER.value)
-                    left_wrist = L(mp_pose.PoseLandmark.LEFT_WRIST.value)
-                    right_wrist = L(mp_pose.PoseLandmark.RIGHT_WRIST.value)
-                    left_elbow = L(mp_pose.PoseLandmark.LEFT_ELBOW.value)
-                    right_elbow = L(mp_pose.PoseLandmark.RIGHT_ELBOW.value)
-                    left_hip = L(mp_pose.PoseLandmark.LEFT_HIP.value)
-                    right_hip = L(mp_pose.PoseLandmark.RIGHT_HIP.value)
-                    left_ankle = L(mp_pose.PoseLandmark.LEFT_ANKLE.value)
-                    right_ankle = L(mp_pose.PoseLandmark.RIGHT_ANKLE.value)
-
-                    now = time.time()
-
-                    # decide which player each landmark belongs to by nose x
-                    if nose is None:
-                        time.sleep(0.005)
-                        continue
-                    player_id = 0 if nose[0] < 0.5 else 1
-
-                    # choose side-specific landmarks
-                    if player_id == 0:
-                        shoulder = left_shoulder
-                        wrist = left_wrist
-                        hip = left_hip
-                        ankle = left_ankle
-                        facing_dir = 1.0  # punching to the right
-                    else:
-                        shoulder = right_shoulder
-                        wrist = right_wrist
-                        hip = right_hip
-                        ankle = right_ankle
-                        facing_dir = -1.0  # punching to the left
-
-                    # initialize baseline hip
-                    if hip and self._hip_baseline[player_id] is None:
-                        self._hip_baseline[player_id] = hip[1]
-
-                    # compute wrist velocity
-                    prev_x = self._last_wrist_x[player_id]
-                    prev_t = self._last_time[player_id]
-                    self._last_time[player_id] = now
-                    if wrist:
-                        self._last_wrist_x[player_id] = wrist[0]
-                    # velocity in normalized units per second
-                    vel_x = 0.0
-                    if prev_x is not None and prev_t is not None and wrist:
-                        dt = max(1e-3, now - prev_t)
-                        vel_x = (wrist[0] - prev_x) / dt
-
-                    # check cooldown
-                    if now < self._cooldown_until[player_id]:
-                        time.sleep(0.005)
-                        continue
-
-                    # punch detection: wrist moving quickly outward and displaced past shoulder
-                    punch_disp = None
-                    if wrist and shoulder:
-                        punch_disp = (wrist[0] - shoulder[0]) * facing_dir
-
-                    if punch_disp is not None and punch_disp > self.punch_disp_threshold and vel_x * facing_dir > self.punch_vel_threshold:
-                        # detected punch
-                        self._cooldown_until[player_id] = now + self.cooldown_seconds
-                        try:
-                            self.callback(player_id, 'punch')
-                            try:
-                                if mc and hasattr(mc, 'set_latest_action'):
-                                    mc.set_latest_action(player_id, 'PUNCH')
-                            except Exception:
-                                pass
-                        except Exception:
-                            pass
-                        time.sleep(0.01)
-                        continue
-
-                    # BLOCK detection: wrists close together near chest area
                     try:
-                        lw = left_wrist
-                        rw = right_wrist
-                        ls = left_shoulder
-                        rs = right_shoulder
-                        if lw and rw and ls and rs:
-                            dist = math.hypot(lw[0] - rw[0], lw[1] - rw[1])
-                            shoulder_y = 0.5 * (ls[1] + rs[1])
-                            wrist_y_avg = 0.5 * (lw[1] + rw[1])
-                            if dist < self.block_wrist_dist_threshold and abs(wrist_y_avg - shoulder_y) < self.block_chest_y_thresh:
-                                self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                try:
-                                    self.callback(player_id, 'block')
-                                    try:
-                                        if mc and hasattr(mc, 'set_latest_action'):
-                                            mc.set_latest_action(player_id, 'BLOCK')
-                                    except Exception:
-                                        pass
-                                except Exception:
-                                    pass
-                                time.sleep(0.01)
-                                continue
+                        _run_detection_for_landmarks(lm_list)
                     except Exception:
                         pass
 
-                    # kick detection: ankle higher (smaller y) than hip by threshold
-                    if ankle and hip:
-                        if (hip[1] - ankle[1]) > self.kick_height_threshold:
-                            self._cooldown_until[player_id] = now + self.cooldown_seconds
-                            try:
-                                self.callback(player_id, 'kick')
-                                try:
-                                    if mc and hasattr(mc, 'set_latest_action'):
-                                        mc.set_latest_action(player_id, 'KICK')
-                                except Exception:
-                                    pass
-                            except Exception:
-                                pass
-                            time.sleep(0.01)
-                            continue
-
-                    # jump detection: hip y drops significantly from baseline
-                    baseline = self._hip_baseline[player_id]
-                    if hip and baseline is not None:
-                        if (baseline - hip[1]) > self.jump_height_threshold:
-                            self._cooldown_until[player_id] = now + self.cooldown_seconds
-                            try:
-                                self.callback(player_id, 'jump')
-                                try:
-                                    if mc and hasattr(mc, 'set_latest_action'):
-                                        mc.set_latest_action(player_id, 'JUMP')
-                                except Exception:
-                                    pass
-                            except Exception:
-                                pass
-                            time.sleep(0.01)
-                            continue
-
-                    # small sleep to avoid hogging CPU
                     time.sleep(0.005)
                 except Exception:
                     time.sleep(0.02)
+            return
 
-        else:
-            cap = cv2.VideoCapture(self.camera_index)
-            if not cap.isOpened():
-                print("ActionDetector: unable to open camera")
-                self._running = False
-                return
+        # Otherwise open the camera and run Pose on left/right crops
+        cap = cv2.VideoCapture(self.camera_index)
+        if not cap.isOpened():
+            print("ActionDetector: unable to open camera")
+            self._running = False
+            return
 
-            mp_pose = mp.solutions.pose
-            with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-                while self._running and cap.isOpened():
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
+        with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+            while self._running and cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-                    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results = pose.process(img_rgb)
+                h, w = frame.shape[:2]
+                half_w = max(1, w // 2)
 
-                    if results and results.pose_landmarks:
-                        # landmarks are normalized in [0,1]
-                        lm = results.pose_landmarks.landmark
+                left_crop = frame[:, :half_w]
+                right_crop = frame[:, half_w:]
 
-                        # helper to read landmark safely
-                        def L(idx: int) -> Optional[Tuple[float, float]]:
-                            try:
-                                v = lm[idx]
-                                return (v.x, v.y)
-                            except Exception:
-                                return None
+                try:
+                    left_rgb = cv2.cvtColor(left_crop, cv2.COLOR_BGR2RGB)
+                    results_l = pose.process(left_rgb)
+                except Exception:
+                    results_l = None
 
-                        # keypoints we use
-                        nose = L(mp_pose.PoseLandmark.NOSE.value)
-                        left_shoulder = L(mp_pose.PoseLandmark.LEFT_SHOULDER.value)
-                        right_shoulder = L(mp_pose.PoseLandmark.RIGHT_SHOULDER.value)
-                        left_wrist = L(mp_pose.PoseLandmark.LEFT_WRIST.value)
-                        right_wrist = L(mp_pose.PoseLandmark.RIGHT_WRIST.value)
-                        left_elbow = L(mp_pose.PoseLandmark.LEFT_ELBOW.value)
-                        right_elbow = L(mp_pose.PoseLandmark.RIGHT_ELBOW.value)
-                        left_hip = L(mp_pose.PoseLandmark.LEFT_HIP.value)
-                        right_hip = L(mp_pose.PoseLandmark.RIGHT_HIP.value)
-                        left_ankle = L(mp_pose.PoseLandmark.LEFT_ANKLE.value)
-                        right_ankle = L(mp_pose.PoseLandmark.RIGHT_ANKLE.value)
+                try:
+                    right_rgb = cv2.cvtColor(right_crop, cv2.COLOR_BGR2RGB)
+                    results_r = pose.process(right_rgb)
+                except Exception:
+                    results_r = None
 
-                        now = time.time()
+                if results_l and results_l.pose_landmarks:
+                    try:
+                        lm_l = results_l.pose_landmarks.landmark
+                        lm_list = [(v.x * 0.5, v.y) for v in lm_l]
+                        _run_detection_for_landmarks(lm_list, assumed_player=0)
+                    except Exception:
+                        pass
 
-                        # decide which player each landmark belongs to by nose x
-                        if nose is None:
-                            continue
-                        player_id = 0 if nose[0] < 0.5 else 1
+                if results_r and results_r.pose_landmarks:
+                    try:
+                        lm_r = results_r.pose_landmarks.landmark
+                        lm_list = [(v.x * 0.5 + 0.5, v.y) for v in lm_r]
+                        _run_detection_for_landmarks(lm_list, assumed_player=1)
+                    except Exception:
+                        pass
 
-                        # choose side-specific landmarks
-                        if player_id == 0:
-                            shoulder = left_shoulder
-                            wrist = left_wrist
-                            hip = left_hip
-                            ankle = left_ankle
-                            facing_dir = 1.0  # punching to the right
-                        else:
-                            shoulder = right_shoulder
-                            wrist = right_wrist
-                            hip = right_hip
-                            ankle = right_ankle
-                            facing_dir = -1.0  # punching to the left
+                time.sleep(0.01)
 
-                        # initialize baseline hip
-                        if hip and self._hip_baseline[player_id] is None:
-                            self._hip_baseline[player_id] = hip[1]
-
-                        # compute wrist velocity
-                        prev_x = self._last_wrist_x[player_id]
-                        prev_t = self._last_time[player_id]
-                        self._last_time[player_id] = now
-                        if wrist:
-                            self._last_wrist_x[player_id] = wrist[0]
-                        # velocity in normalized units per second
-                        vel_x = 0.0
-                        if prev_x is not None and prev_t is not None and wrist:
-                            dt = max(1e-3, now - prev_t)
-                            vel_x = (wrist[0] - prev_x) / dt
-
-                        # check cooldown
-                        if now < self._cooldown_until[player_id]:
-                            continue
-
-                        # BLOCK detection: wrists close together near chest area
-                        try:
-                            lw = left_wrist
-                            rw = right_wrist
-                            ls = left_shoulder
-                            rs = right_shoulder
-                            if lw and rw and ls and rs:
-                                dist = math.hypot(lw[0] - rw[0], lw[1] - rw[1])
-                                shoulder_y = 0.5 * (ls[1] + rs[1])
-                                wrist_y_avg = 0.5 * (lw[1] + rw[1])
-                                if dist < self.block_wrist_dist_threshold and abs(wrist_y_avg - shoulder_y) < self.block_chest_y_thresh:
-                                    self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                    try:
-                                        self.callback(player_id, 'block')
-                                        try:
-                                            if mc and hasattr(mc, 'set_latest_action'):
-                                                mc.set_latest_action(player_id, 'BLOCK')
-                                        except Exception:
-                                            pass
-                                    except Exception:
-                                        pass
-                                    continue
-                        except Exception:
-                            pass
-
-                        # punch detection: wrist moving quickly outward and displaced past shoulder
-                        punch_disp = None
-                        if wrist and shoulder:
-                            punch_disp = (wrist[0] - shoulder[0]) * facing_dir
-
-                        if punch_disp is not None and punch_disp > self.punch_disp_threshold and vel_x * facing_dir > self.punch_vel_threshold:
-                            # validate with elbow extension (reduce false positives)
-                            try:
-                                elbow = left_elbow if player_id == 0 else right_elbow
-                                shoulder_pt = left_shoulder if player_id == 0 else right_shoulder
-                                wrist_pt = left_wrist if player_id == 0 else right_wrist
-                                extended_ok = True
-                                if elbow and shoulder_pt and wrist_pt:
-                                    ax = shoulder_pt[0] - elbow[0]
-                                    ay = shoulder_pt[1] - elbow[1]
-                                    bx = wrist_pt[0] - elbow[0]
-                                    by = wrist_pt[1] - elbow[1]
-                                    na = math.hypot(ax, ay)
-                                    nb = math.hypot(bx, by)
-                                    if na > 1e-6 and nb > 1e-6:
-                                        dot = (ax * bx + ay * by) / (na * nb)
-                                        extended_ok = (dot < self.elbow_extension_cos_threshold)
-                                if not extended_ok:
-                                    continue
-
-                                # detected punch
-                                self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                try:
-                                    self.callback(player_id, 'punch')
-                                    try:
-                                        if mc and hasattr(mc, 'set_latest_action'):
-                                            mc.set_latest_action(player_id, 'PUNCH')
-                                    except Exception:
-                                        pass
-                                except Exception:
-                                    pass
-                                continue
-                            except Exception:
-                                # fallback: still report punch
-                                try:
-                                    self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                    self.callback(player_id, 'punch')
-                                except Exception:
-                                    pass
-                                continue
-
-                        # kick detection: ankle higher (smaller y) than hip by threshold
-                        if ankle and hip:
-                            if (hip[1] - ankle[1]) > self.kick_height_threshold:
-                                self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                try:
-                                    self.callback(player_id, 'kick')
-                                except Exception:
-                                    pass
-                                continue
-
-                        # jump detection: hip y drops significantly from baseline
-                        baseline = self._hip_baseline[player_id]
-                        if hip and baseline is not None:
-                            if (baseline - hip[1]) > self.jump_height_threshold:
-                                self._cooldown_until[player_id] = now + self.cooldown_seconds
-                                try:
-                                    self.callback(player_id, 'jump')
-                                except Exception:
-                                    pass
-                                continue
-
-                    # small sleep to avoid hogging CPU
-                    time.sleep(0.01)
-
-                cap.release()
+        cap.release()
+        # end of multi-crop detection loop
 
 
 __all__ = ["ActionDetector"]
