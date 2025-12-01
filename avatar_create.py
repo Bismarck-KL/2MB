@@ -742,7 +742,7 @@ class AvatarCreateScene:
                         )
                         # place countdown near the top of the preview box for visibility
                         cd_rect = cd_txt.get_rect(
-                            center=(self.app.WIDTH // 2, box_top + 68)
+                            center=(self.app.WIDTH // 2, box_top - 20)
                         )
                         self.screen.blit(cd_txt, cd_rect)
                 except Exception:
