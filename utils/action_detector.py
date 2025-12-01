@@ -59,6 +59,15 @@ class ActionDetector:
         self.block_chest_y_thresh = 0.16
         self.elbow_extension_cos_threshold = -0.8
 
+        # processing throttling (frames per second to actually run the Pose model)
+        # Lowering this reduces CPU usage. Set to None or 0 to process every frame.
+        self.process_fps = 10
+        # optional downscale factor applied to each crop before feeding to Pose.
+        # Values in (0,1] — smaller reduces CPU but may reduce accuracy.
+        self.crop_scale = 0.7
+        # internal tracker
+        self._last_process_time = 0.0
+
     def start(self):
         if self._running:
             return
@@ -276,21 +285,38 @@ class ActionDetector:
                 ret, frame = cap.read()
                 if not ret:
                     break
-
                 h, w = frame.shape[:2]
                 half_w = max(1, w // 2)
 
                 left_crop = frame[:, :half_w]
                 right_crop = frame[:, half_w:]
 
+                # Throttle processing to target FPS to reduce CPU usage.
+                now = time.time()
+                if self.process_fps and self.process_fps > 0:
+                    min_dt = 1.0 / float(self.process_fps)
+                    if (now - self._last_process_time) < min_dt:
+                        # small sleep to avoid busy-looping
+                        time.sleep(0.003)
+                        continue
+                self._last_process_time = now
+
+                # optionally downscale crops before running Pose to reduce cost
                 try:
-                    left_rgb = cv2.cvtColor(left_crop, cv2.COLOR_BGR2RGB)
+                    if self.crop_scale and 0.0 < self.crop_scale < 1.0:
+                        left_proc = cv2.resize(left_crop, (0, 0), fx=self.crop_scale, fy=self.crop_scale, interpolation=cv2.INTER_AREA)
+                        right_proc = cv2.resize(right_crop, (0, 0), fx=self.crop_scale, fy=self.crop_scale, interpolation=cv2.INTER_AREA)
+                    else:
+                        left_proc = left_crop
+                        right_proc = right_crop
+
+                    left_rgb = cv2.cvtColor(left_proc, cv2.COLOR_BGR2RGB)
                     results_l = pose.process(left_rgb)
                 except Exception:
                     results_l = None
 
                 try:
-                    right_rgb = cv2.cvtColor(right_crop, cv2.COLOR_BGR2RGB)
+                    right_rgb = cv2.cvtColor(right_proc, cv2.COLOR_BGR2RGB)
                     results_r = pose.process(right_rgb)
                 except Exception:
                     results_r = None
@@ -311,7 +337,8 @@ class ActionDetector:
                     except Exception:
                         pass
 
-                time.sleep(0.01)
+                # small sleep to yield
+                time.sleep(0.001)
 
         cap.release()
         # end of multi-crop detection loop
