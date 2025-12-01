@@ -547,7 +547,7 @@ class AvatarCreateScene:
             self.screen.fill(BG)
 
         # simple visual
-        txt = self.title_font.render("Avatar Create Scene", True, TITLE)
+        txt = self.title_font.render("Create your own avatar", True, TITLE)
         rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
         self.screen.blit(txt, rect)
 
@@ -736,11 +736,11 @@ class AvatarCreateScene:
                         secs = max(0, int(math.ceil(remaining)))
                         # print("Auto-capture in:", secs, "seconds")
                         cd_txt = self.title_font.render(
-                            f"Auto capture in: {secs}s", True, BLACK
+                            f"Auto capture in: {secs}s", True, (255, 255, 255)
                         )
-                        # place countdown near the top of the preview box for visibility
+                        # move up by 50 pixels
                         cd_rect = cd_txt.get_rect(
-                            center=(self.app.WIDTH // 2, box_top + 18)
+                            center=(self.app.WIDTH // 2, box_top - 32)
                         )
                         self.screen.blit(cd_txt, cd_rect)
                 except Exception:
@@ -843,32 +843,23 @@ class AvatarCreateScene:
 
                     report(60)
 
-                    # try background removal (pure OpenCV) to make tpose.png
-                    ok = False
+                    # Disabled: background removal (always copy/resize original image for tpose.png)
                     try:
-                        ok = self._remove_background(
-                            save_path, tpose_path, target_w, target_h
-                        )
+                        img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+                        if img_cv is not None:
+                            resized = cv2.resize(
+                                img_cv,
+                                (target_w, target_h),
+                                interpolation=cv2.INTER_CUBIC,
+                            )
+                            cv2.imwrite(tpose_path, resized)
+                        else:
+                            shutil.copyfile(save_path, tpose_path)
                     except Exception:
-                        ok = False
-
-                    if not ok:
                         try:
-                            img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
-                            if img_cv is not None:
-                                resized = cv2.resize(
-                                    img_cv,
-                                    (target_w, target_h),
-                                    interpolation=cv2.INTER_CUBIC,
-                                )
-                                cv2.imwrite(tpose_path, resized)
-                            else:
-                                shutil.copyfile(save_path, tpose_path)
+                            shutil.copyfile(save_path, tpose_path)
                         except Exception:
-                            try:
-                                shutil.copyfile(save_path, tpose_path)
-                            except Exception:
-                                pass
+                            pass
 
                     report(100)
                 except Exception as e:
