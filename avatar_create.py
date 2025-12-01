@@ -19,8 +19,8 @@ from utils.color import (
     NEXT_HOVER,
     CAPTURE_BASE,
     CAPTURE_HOVER,
-    BLACK,
     HINT_TEXT,
+    WHITE,
 )
 from utils.loading import run_loading_with_callback
 from utils.ui import Button
@@ -81,7 +81,7 @@ class AvatarCreateScene:
         self.current_player = 1
 
         # capture photo button (center)
-        capture_w, capture_h = 180, 56
+        capture_w, capture_h = 460, 56
         capture_x = (self.app.WIDTH - capture_w) // 2
         capture_y = self.app.HEIGHT // 2 + 80
         self.capture_rect = pygame.Rect(capture_x, capture_y, capture_w, capture_h)
@@ -547,7 +547,7 @@ class AvatarCreateScene:
             self.screen.fill(BG)
 
         # simple visual
-        txt = self.title_font.render("Create your own avatar", True, TITLE)
+        txt = self.title_font.render("Avatar Create Scene", True, TITLE)
         rect = txt.get_rect(center=(self.app.WIDTH // 2, self.app.HEIGHT // 2))
         self.screen.blit(txt, rect)
 
@@ -736,11 +736,12 @@ class AvatarCreateScene:
                         secs = max(0, int(math.ceil(remaining)))
                         # print("Auto-capture in:", secs, "seconds")
                         cd_txt = self.title_font.render(
-                            f"Auto capture in: {secs}s", True, (255, 255, 255)
+                            f"Auto capture in: {secs}s", True, WHITE
+                            
                         )
-                        # move up by 50 pixels
+                        # place countdown near the top of the preview box for visibility
                         cd_rect = cd_txt.get_rect(
-                            center=(self.app.WIDTH // 2, box_top - 32)
+                            center=(self.app.WIDTH // 2, box_top - 20)
                         )
                         self.screen.blit(cd_txt, cd_rect)
                 except Exception:
@@ -843,23 +844,32 @@ class AvatarCreateScene:
 
                     report(60)
 
-                    # Disabled: background removal (always copy/resize original image for tpose.png)
+                    # try background removal (pure OpenCV) to make tpose.png
+                    ok = False
                     try:
-                        img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
-                        if img_cv is not None:
-                            resized = cv2.resize(
-                                img_cv,
-                                (target_w, target_h),
-                                interpolation=cv2.INTER_CUBIC,
-                            )
-                            cv2.imwrite(tpose_path, resized)
-                        else:
-                            shutil.copyfile(save_path, tpose_path)
+                        ok = self._remove_background(
+                            save_path, tpose_path, target_w, target_h
+                        )
                     except Exception:
+                        ok = False
+
+                    if not ok:
                         try:
-                            shutil.copyfile(save_path, tpose_path)
+                            img_cv = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+                            if img_cv is not None:
+                                resized = cv2.resize(
+                                    img_cv,
+                                    (target_w, target_h),
+                                    interpolation=cv2.INTER_CUBIC,
+                                )
+                                cv2.imwrite(tpose_path, resized)
+                            else:
+                                shutil.copyfile(save_path, tpose_path)
                         except Exception:
-                            pass
+                            try:
+                                shutil.copyfile(save_path, tpose_path)
+                            except Exception:
+                                pass
 
                     report(100)
                 except Exception as e:
@@ -881,7 +891,7 @@ class AvatarCreateScene:
                     try:
                         self.current_player = 2
                         self.capture_button.text = (
-                            f"拍照成為Player{self.current_player}"
+                            f"Capture to become Player {self.current_player}"
                         )
                         # ensure preview flags are off
                         self.show_preview = False
@@ -897,6 +907,10 @@ class AvatarCreateScene:
                         self.show_preview = False
                         self.preview_surf = None
                         self.preview_path = None
+
+                        # auto go to TutorialScene after
+                        self.app.change_scene("TutorialScene")   
+
                     except Exception:
                         pass
 
