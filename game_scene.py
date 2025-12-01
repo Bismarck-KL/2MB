@@ -168,10 +168,20 @@ class GameScene:
         """Called when the scene becomes active. Start mediapipe capture in a new window."""
         try:
             # show the project's loading UI while we initialize mediapipe
+            # Start the capture first so the camera preview window can appear
+            # while the loading UI is shown. initialize_mediapipe will detect
+            # an already-running capture and wait for frames instead of
+            # opening the camera again.
+            try:
+                start_mediapipe_capture()
+            except Exception:
+                # ignore if start fails here; run_loading will still attempt to initialize
+                pass
+
             run_loading_with_callback(
                 surface=self.screen,
                 loader=initialize_mediapipe,
-                on_complete=start_mediapipe_capture,
+                on_complete=None,
                 title="Initializing Camera",
                 subtitle="Preparing MediaPipe...",
             )
@@ -418,6 +428,34 @@ class GameScene:
 
         # 檢查勝負
         self.check_win_condition()
+
+        # If a detected action has expired (no recent camera match), clear it
+        # and ensure the avatar returns to the idle/ready pose unless the
+        # player is actively attacking, jumping or hurt.
+        try:
+            now = time.time()
+            for pid, player in ((0, self.player_1), (1, self.player_2)):
+                expiry = self._action_expiry.get(pid, 0)
+                if now >= expiry:
+                    # clear displayed detected action
+                    if self.detected_actions.get(pid) is not None:
+                        self.detected_actions[pid] = None
+
+                    # don't force-ready if player is mid-attack, jumping, or hurt
+                    busy = getattr(player, 'attack_cooldown', 0) > 0 or player.is_jumping or player.is_hurt
+                    if not busy:
+                        try:
+                            player.set_pose('ready')
+                        except Exception:
+                            pass
+
+                    # stop blocking when no camera block is active
+                    try:
+                        player.is_blocking = False
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     def handle_player_input(self, keys):
         """處理雙玩家輸入"""
