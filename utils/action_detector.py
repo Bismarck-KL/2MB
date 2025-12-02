@@ -52,7 +52,8 @@ class ActionDetector:
         # thresholds (tweak as needed)
         self.punch_vel_threshold = 0.15
         self.punch_disp_threshold = 0.08
-        self.kick_height_threshold = 0.10
+        # 0.1 are too high for kick/jump in our testing
+        self.kick_height_threshold = 0.075
         self.jump_height_threshold = 0.12
         self.cooldown_seconds = 0.6
         self.block_wrist_dist_threshold = 0.08
