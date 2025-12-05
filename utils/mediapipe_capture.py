@@ -97,7 +97,11 @@ class _MediapipeCapture:
                         try:
                             lm = []
                             for l in results.pose_landmarks.landmark:
-                                lm.append((l.x, l.y))
+                                # include z for depth-aware detections (z is relative)
+                                try:
+                                    lm.append((l.x, l.y, l.z))
+                                except Exception:
+                                    lm.append((l.x, l.y))
                             with self._latest_lock:
                                 self._latest = {
                                     'landmarks': lm,
@@ -164,8 +168,10 @@ class _MediapipeCapture:
     def get_latest_landmarks(self):
         """Return a copy of the latest landmarks dict or None.
 
-        The structure is: {'landmarks': [(x,y),...], 'width':int, 'height':int, 'ts': float}
-        Coordinates are normalized (0..1)."""
+        The structure is: {'landmarks': [(x,y[,z]), ...], 'width':int, 'height':int, 'ts': float}
+        Coordinates are normalized (0..1) for x and y; z is included when available
+        and represents relative depth (as provided by MediaPipe).
+        """
         try:
             with self._latest_lock:
                 if self._latest is None:
