@@ -252,9 +252,11 @@ class GameScene:
                     pv_surf.fill((8, 8, 12))
                     self.screen.blit(pv_surf, (pv_x, pv_y))
 
-                    # draw landmarks (normalized coordinates)
-                    for nx, ny in lm:
+                    # draw landmarks (normalized coordinates). lm entries may be (x,y) or (x,y,z)
+                    for p in lm:
                         try:
+                            nx = p[0]
+                            ny = p[1]
                             x = pv_x + int(nx * pv_w)
                             y = pv_y + int(ny * pv_h)
                             pygame.draw.circle(self.screen, (0, 200, 0), (x, y), 3)
