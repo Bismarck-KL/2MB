@@ -54,6 +54,8 @@ class ActionDetector:
         self.punch_disp_threshold = 0.08
         # 0.1 are too high for kick/jump in our testing
         self.kick_height_threshold = 0.1
+        # forward (toward-camera) z threshold for kick detection (MediaPipe z units)
+        self.kick_z_threshold = 0.06
         self.jump_height_threshold = 0.12
         self.cooldown_seconds = 0.6
         self.block_wrist_dist_threshold = 0.08
@@ -94,9 +96,13 @@ class ActionDetector:
     def _run(self):
         mp_pose = mp.solutions.pose
 
-        def _get_point(lm_list, idx: int) -> Optional[Tuple[float, float]]:
+        def _get_point(lm_list, idx: int):
+            """Return landmark at idx as (x,y) or (x,y,z) depending on availability."""
             try:
                 v = lm_list[idx]
+                # support (x,y) or (x,y,z)
+                if hasattr(v, '__len__') and len(v) >= 3:
+                    return (v[0], v[1], v[2])
                 return (v[0], v[1])
             except Exception:
                 return None
@@ -230,15 +236,54 @@ class ActionDetector:
                         pass
                     return
 
-            # KICK detection
-            if ankle and hip:
-                if (hip[1] - ankle[1]) > self.kick_height_threshold:
-                    self._cooldown_until[player_id] = now + self.cooldown_seconds
-                    try:
-                        self.callback(player_id, 'kick')
-                    except Exception:
-                        pass
-                    return
+            # KICK detection - consider either leg (left or right ankle) raised
+            try:
+                # determine a robust hip reference: prefer mean of both hips if available
+                hip_y_ref = None
+                if left_hip and right_hip:
+                    hip_y_ref = 0.5 * (left_hip[1] + right_hip[1])
+                elif hip:
+                    hip_y_ref = hip[1]
+
+                # robust hip z reference if available
+                hip_z_ref = None
+                try:
+                    if left_hip and len(left_hip) >= 3 and right_hip and len(right_hip) >= 3:
+                        hip_z_ref = 0.5 * (left_hip[2] + right_hip[2])
+                    elif hip and len(hip) >= 3:
+                        hip_z_ref = hip[2]
+                except Exception:
+                    hip_z_ref = None
+
+                if hip_y_ref is not None or hip_z_ref is not None:
+                    # check both ankles if present
+                    candidate_ankles = []
+                    if left_ankle:
+                        candidate_ankles.append(left_ankle)
+                    if right_ankle:
+                        candidate_ankles.append(right_ankle)
+
+                    for ank in candidate_ankles:
+                        ank_y = ank[1] if ank and len(ank) >= 2 else None
+                        ank_z = ank[2] if ank and len(ank) >= 3 else None
+
+                        vertical_ok = hip_y_ref is not None and ank_y is not None and (hip_y_ref - ank_y) > self.kick_height_threshold
+                        forward_ok = hip_z_ref is not None and ank_z is not None and (hip_z_ref - ank_z) > self.kick_z_threshold
+
+                        if vertical_ok or forward_ok:
+                            self._cooldown_until[player_id] = now + self.cooldown_seconds
+                            try:
+                                self.callback(player_id, 'kick')
+                                if mc and hasattr(mc, 'set_latest_action'):
+                                    try:
+                                        mc.set_latest_action(player_id, 'KICK')
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+                            return
+            except Exception:
+                pass
 
             # JUMP detection
             baseline = self._hip_baseline[player_id]
@@ -337,7 +382,8 @@ class ActionDetector:
                 if results_l and results_l.pose_landmarks:
                     try:
                         lm_l = results_l.pose_landmarks.landmark
-                        lm_list = [(v.x * 0.5, v.y) for v in lm_l]
+                        # include z if available and map x back to full-frame coordinates
+                        lm_list = [((v.x * 0.5), v.y, getattr(v, 'z', None)) for v in lm_l]
                         _run_detection_for_landmarks(lm_list, assumed_player=0)
                     except Exception:
                         pass
@@ -345,7 +391,7 @@ class ActionDetector:
                 if results_r and results_r.pose_landmarks:
                     try:
                         lm_r = results_r.pose_landmarks.landmark
-                        lm_list = [(v.x * 0.5 + 0.5, v.y) for v in lm_r]
+                        lm_list = [((v.x * 0.5 + 0.5), v.y, getattr(v, 'z', None)) for v in lm_r]
                         _run_detection_for_landmarks(lm_list, assumed_player=1)
                     except Exception:
                         pass
